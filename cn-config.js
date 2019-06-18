@@ -2,8 +2,7 @@
 
 module.exports = {
   getCfg(name, config, defaultVal) {
-    let key = `${name.toUpperCase()}_${config.toUpperCase()}`;
-    let value = process.env[key];
+    let value = process.env[this.getKey(name, config)];
 
     // If env var doesn't exist then return the default value
     if (value === undefined) {
@@ -11,5 +10,9 @@ module.exports = {
     }
 
     return value;
+  },
+
+  getKey(name, config) {
+    return `${name.toUpperCase()}_${config.toUpperCase()}`;
   },
 };

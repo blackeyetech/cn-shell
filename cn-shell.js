@@ -95,6 +95,16 @@ class CNShell {
     return CNConfig.getCfg(this.name, config, defaultVal);
   }
 
+  cfgRequired(config) {
+    let value = CNConfig.getCfg(this.name, config);
+
+    if (value === undefined) {
+      let key = CNConfig.getKey(this.name, config);
+
+      throw Error(`Config parameter (${key}) was not set!`);
+    }
+  }
+
   addHealthEndpoint() {
     let path = this.cfg("HEALTHCHECK_PATH", DEFAULT_HEALTHCHECK_PATH);
 
