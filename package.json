@@ -1,0 +1,60 @@
+{
+  "version": "1.0.0",
+  "name": "cn-shell",
+  "description": "Cloud Native Shell",
+  "main": "cn-shell.js",
+  "bin": "",
+  "lint-staged": {
+    "**/*.js": [
+      "prettier --write",
+      "git add"
+    ],
+    "**/*.{json,md,yaml}": [
+      "prettier --write",
+      "git add"
+    ]
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged"
+    }
+  },
+  "prettier": {
+    "trailingComma": "all"
+  },
+  "scripts": {
+    "check-staged": "lint-staged",
+    "format": "prettier --write '**/*.{js,json,md,yaml}'",
+    "install-bin": "npm install -g $(npm pack . | tail -1)",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "precommit": "lint-staged"
+  },
+  "engines": {
+    "node": ">=8.0.0"
+  },
+  "keywords": [
+    "Cloud Native"
+  ],
+  "author": "Black Eye Technology",
+  "license": "MIT",
+  "devDependencies": {
+    "husky": "^0.14.3",
+    "lint-staged": "^7.2.0",
+    "prettier": "^1.13.7"
+  },
+  "dependencies": {
+    "js-yaml": "^3.12.0",
+    "koa": "^2.7.0",
+    "koa-router": "^7.4.0",
+    "lodash.merge": "^4.6.1",
+    "yargs-parser": "^8.1.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/blackeyetech/cn-shell.git"
+  },
+  "bugs": {
+    "url": "https://github.com/blackeyetech/cn-shell/issues"
+  },
+  "homepage": "https://github.com/blackeyetech/cn-shell#readme"
+}
