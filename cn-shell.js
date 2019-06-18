@@ -15,25 +15,25 @@ const CNHttp = require("./cn-http.js");
 class CNShell {
   constructor(name) {
     this.name = name;
-    this.logger = new CNLogger(name);
+    this.log = new CNLogger(name);
 
     let logLevel = this.cfg("LOG_LEVEL");
 
     if (logLevel === "quiet") {
-      this.logger.level = CNLogger.QUIET_LEVEL;
+      this.log.level = CNLogger.QUIET_LEVEL;
     } else if (logLevel === "trace") {
-      this.logger.level = CNLogger.TRACE_LEVEL;
+      this.log.level = CNLogger.TRACE_LEVEL;
     } else if (logLevel === "debug") {
-      this.logger.level = CNLogger.DEBUG_LEVEL;
+      this.log.level = CNLogger.DEBUG_LEVEL;
     } else {
-      this.logger.level = CNLogger.INFO_LEVEL;
+      this.log.level = CNLogger.INFO_LEVEL;
     }
 
     this.http = new CNHttp(name, this.log);
     this.addHealthEndpoint();
   }
 
-  start() {
+  async startShell() {
     this.info("Starting ...");
     this.info(`CNShell Version (${version})`);
     this.info(`NODE_ENV (${NODE_ENV})`);
@@ -43,17 +43,19 @@ class CNShell {
     process.on("SIGTERM", async () => await this.exit());
 
     this.http.start();
+    await this.start();
 
-    this.info("Now ready to Rock!");
+    this.info("Now ready to Rock and Roll!");
+  }
+
+  async start() {
+    // This should be overriden by the application to impliment the logic
+    // required to start the app
   }
 
   async stop() {
-    this.info("Stopping ...");
-
-    // This should be overriden my the application to provide any shutdown
-    // logic
-
-    this.info("Stopped!");
+    // This should be overriden by the application to provide any shutdown
+    // logic required
   }
 
   async exit() {
@@ -68,27 +70,27 @@ class CNShell {
   }
 
   fatal(...args) {
-    this.logger.fatal(...args);
+    this.log.fatal(...args);
   }
 
   error(...args) {
-    this.logger.error(...args);
+    this.log.error(...args);
   }
 
   warn(...args) {
-    this.logger.warn(...args);
+    this.log.warn(...args);
   }
 
   info(...args) {
-    this.logger.info(...args);
+    this.log.info(...args);
   }
 
   debug(...args) {
-    this.logger.debug(...args);
+    this.log.debug(...args);
   }
 
   trace(...args) {
-    this.logger.trace(...args);
+    this.log.trace(...args);
   }
 
   cfg(config, defaultVal) {
@@ -126,7 +128,7 @@ class CNShell {
   async healthy() {
     // This is a default health check which should be overridden if something
     // more advanced is required
-    return !HEALTHY;
+    return HEALTHY;
   }
 }
 

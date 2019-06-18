@@ -26,10 +26,10 @@ class InternalError extends Error {
 }
 
 class CNHttp {
-  constructor(name, logger) {
+  constructor(name, log) {
     this.name = name;
 
-    this.log = logger;
+    this.log = log;
 
     this.app = new Koa();
     this.router = new KoaRouter();
