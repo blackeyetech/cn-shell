@@ -105,6 +105,8 @@ class CNShell {
 
       throw Error(`Config parameter (${key}) was not set!`);
     }
+
+    return value;
   }
 
   addHealthEndpoint() {
