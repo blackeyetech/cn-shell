@@ -33,7 +33,7 @@ class CNShell {
     this.addHealthEndpoint();
   }
 
-  async startShell() {
+  async start() {
     this.info("Starting ...");
     this.info(`CNShell Version (${version})`);
     this.info(`NODE_ENV (${NODE_ENV})`);
@@ -42,14 +42,14 @@ class CNShell {
     process.on("SIGINT", async () => await this.exit());
     process.on("SIGTERM", async () => await this.exit());
 
-    this.http.start();
+    this.http.startApp();
 
     setImmediate(() => this.start());
 
     this.info("Now ready to Rock and Roll!");
   }
 
-  start() {
+  startApp() {
     // This should be overriden by the application to impliment the logic
     // required to start the app
   }
