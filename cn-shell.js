@@ -43,12 +43,13 @@ class CNShell {
     process.on("SIGTERM", async () => await this.exit());
 
     this.http.start();
-    await this.start();
+
+    setImmediate(() => this.start());
 
     this.info("Now ready to Rock and Roll!");
   }
 
-  async start() {
+  start() {
     // This should be overriden by the application to impliment the logic
     // required to start the app
   }
