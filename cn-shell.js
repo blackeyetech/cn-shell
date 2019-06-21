@@ -15,10 +15,11 @@ const CNHttp = require("./cn-http.js");
 class CNShell {
   constructor(name) {
     this.name = name;
+    this.exts = {};
+
     this.log = new CNLogger(name);
 
     let logLevel = this.cfg("LOG_LEVEL");
-
     if (logLevel === "quiet") {
       this.log.level = CNLogger.QUIET_LEVEL;
     } else if (logLevel === "trace") {
@@ -31,6 +32,26 @@ class CNShell {
 
     this.http = new CNHttp(name, this.log);
     this.addHealthEndpoint();
+  }
+
+  addExtension(name, extention) {
+    this.info("Adding extension: %s", name);
+
+    this.exts[name] = extention;
+  }
+
+  configureExtention(ext) {
+    ext.name = this.name;
+    ext.cfg = this.cfg;
+    ext.cfgRequired = this.cfgRequired;
+
+    ext.info = this.info;
+    ext.error = this.error;
+    ext.fatal = this.fatal;
+    ext.warn = this.warn;
+    ext.debug = this.debug;
+    ext.trace = this.trace;
+    ext.http = this.http;
   }
 
   async run() {
