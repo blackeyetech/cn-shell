@@ -42,6 +42,7 @@ class CNShell {
     ext.cfg = this.cfg;
     ext.cfgRequired = this.cfgRequired;
 
+    ext.log = this.log;
     ext.info = this.info;
     ext.error = this.error;
     ext.fatal = this.fatal;
