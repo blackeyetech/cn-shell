@@ -34,13 +34,10 @@ class CNShell {
     this.addHealthEndpoint();
   }
 
-  addExtension(name, extention) {
+  addExtension(name, Extention) {
     this.info("Adding extension: %s", name);
 
-    this.exts[name] = extention;
-  }
-
-  configureExtention(ext) {
+    let ext = new Extention();
     ext.name = this.name;
     ext.cfg = this.cfg;
     ext.cfgRequired = this.cfgRequired;
@@ -52,6 +49,8 @@ class CNShell {
     ext.debug = this.debug;
     ext.trace = this.trace;
     ext.http = this.http;
+
+    this.exts[name] = ext;
   }
 
   async run() {
