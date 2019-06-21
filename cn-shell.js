@@ -42,7 +42,7 @@ class CNShell {
     process.on("SIGINT", async () => await this.exit());
     process.on("SIGTERM", async () => await this.exit());
 
-    this.http.startApp();
+    this.http.start();
 
     setImmediate(() => this.start());
 
