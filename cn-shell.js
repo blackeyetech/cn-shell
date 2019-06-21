@@ -33,7 +33,7 @@ class CNShell {
     this.addHealthEndpoint();
   }
 
-  async start() {
+  async run() {
     this.info("Starting ...");
     this.info(`CNShell Version (${version})`);
     this.info(`NODE_ENV (${NODE_ENV})`);
@@ -49,7 +49,7 @@ class CNShell {
     this.info("Now ready to Rock and Roll!");
   }
 
-  startApp() {
+  start() {
     // This should be overriden by the application to impliment the logic
     // required to start the app
   }
