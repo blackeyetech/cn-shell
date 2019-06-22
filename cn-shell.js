@@ -1,7 +1,12 @@
 "use strict";
 
-const HEALTHY = true;
 const DEFAULT_HEALTHCHECK_PATH = "/healthcheck";
+
+const CFG_NAME = "NAME";
+const CFG_LOG_LEVEL = "LOG_LEVEL";
+
+const DEFAULT_NAME = "CNA";
+const DEFAULT_LOG_LEVEL = "1";
 
 const NODE_ENV =
   process.env.NODE_ENV === undefined ? "development" : process.env.NODE_ENV;
@@ -9,135 +14,121 @@ const NODE_ENV =
 const version = require("./package.json").version;
 
 const CNLogger = require("./cn-logger.js");
-const CNConfig = require("./cn-config.js");
 const CNHttp = require("./cn-http.js");
+const cnConfig = require("./cn-config.js");
 
-class CNShell {
-  constructor(name) {
-    this.name = name;
-    this.exts = {};
+let name = cnConfig.get("CNA", CFG_NAME, DEFAULT_NAME);
+let log = new CNLogger(
+  name,
+  cnConfig.get(name, CFG_LOG_LEVEL, DEFAULT_LOG_LEVEL),
+);
+let http = new CNHttp(name, log);
 
-    this.log = new CNLogger(name);
+let extensions = {};
 
-    let logLevel = this.cfg("LOG_LEVEL");
-    if (logLevel === "quiet") {
-      this.log.level = CNLogger.QUIET_LEVEL;
-    } else if (logLevel === "trace") {
-      this.log.level = CNLogger.TRACE_LEVEL;
-    } else if (logLevel === "debug") {
-      this.log.level = CNLogger.DEBUG_LEVEL;
-    } else {
-      this.log.level = CNLogger.INFO_LEVEL;
-    }
+global.cns = {
+  get name() {
+    return name;
+  },
 
-    this.http = new CNHttp(name, this.log);
-    this.addHealthEndpoint();
-  }
+  get log() {
+    return log;
+  },
 
-  addExtension(name, Extention) {
-    this.info("Adding extension: %s", name);
-
-    let ext = new Extention();
-    ext.name = this.name;
-    ext.cfg = this.cfg;
-    ext.cfgRequired = this.cfgRequired;
-
-    ext.log = this.log;
-    ext.info = this.info;
-    ext.error = this.error;
-    ext.fatal = this.fatal;
-    ext.warn = this.warn;
-    ext.debug = this.debug;
-    ext.trace = this.trace;
-    ext.http = this.http;
-
-    this.exts[name] = ext;
-  }
-
-  async run() {
-    this.info("Starting ...");
-    this.info(`CNShell Version (${version})`);
-    this.info(`NODE_ENV (${NODE_ENV})`);
-
-    this.info("Setting up event handler for SIGINT and SIGTERM");
-    process.on("SIGINT", async () => await this.exit());
-    process.on("SIGTERM", async () => await this.exit());
-
-    this.http.start();
-
-    setImmediate(() => this.start());
-
-    this.info("Now ready to Rock and Roll!");
-  }
-
-  start() {
-    // This should be overriden by the application to impliment the logic
-    // required to start the app
-  }
-
-  async stop() {
-    // This should be overriden by the application to provide any shutdown
-    // logic required
-  }
-
-  async exit() {
-    this.info("Exitting ...");
-
-    await this.stop();
-    this.http.stop();
-
-    this.info("So long and thanks for all the fish!");
-
-    process.exit();
-  }
+  get http() {
+    return http;
+  },
 
   fatal(...args) {
-    this.log.fatal(...args);
-  }
+    log.fatal(...args);
+  },
 
   error(...args) {
-    this.log.error(...args);
-  }
+    log.error(...args);
+  },
 
   warn(...args) {
-    this.log.warn(...args);
-  }
+    log.warn(...args);
+  },
 
   info(...args) {
-    this.log.info(...args);
-  }
+    log.info(...args);
+  },
 
   debug(...args) {
-    this.log.debug(...args);
-  }
+    log.debug(...args);
+  },
 
   trace(...args) {
-    this.log.trace(...args);
-  }
+    log.trace(...args);
+  },
 
   cfg(config, defaultVal) {
-    return CNConfig.getCfg(this.name, config, defaultVal);
-  }
+    return cnConfig.get(name, config, defaultVal);
+  },
 
   cfgRequired(config) {
-    let value = CNConfig.getCfg(this.name, config);
+    let value = cnConfig.get(name, config);
 
     if (value === undefined) {
-      let key = CNConfig.getKey(this.name, config);
+      let key = cnConfig.key(name, config);
 
       throw Error(`Config parameter (${key}) was not set!`);
     }
 
     return value;
-  }
+  },
+
+  registerExt(name, extension) {
+    this.info("Registering extension: %s", name);
+
+    extensions[name] = extension;
+  },
+
+  get ext() {
+    return extensions;
+  },
+
+  registerApp(app) {
+    this.info("Registering App");
+    this.app = app;
+  },
+
+  async start() {
+    log.info("Starting ...");
+    log.info(`CNShell Version (${version})`);
+    log.info(`NODE_ENV (${NODE_ENV})`);
+
+    log.info("Setting up event handler for SIGINT and SIGTERM");
+    process.on("SIGINT", async () => await this.exit());
+    process.on("SIGTERM", async () => await this.exit());
+
+    http.start();
+    this.addHealthEndpoint();
+
+    setImmediate(() => this.app.start());
+
+    log.info("Now ready to Rock and Roll!");
+  },
+
+  async exit() {
+    log.info("Exitting ...");
+
+    await this.app.stop();
+    http.stop();
+
+    log.info("So long and thanks for all the fish!");
+
+    process.exit();
+  },
 
   addHealthEndpoint() {
-    let path = this.cfg("HEALTHCHECK_PATH", DEFAULT_HEALTHCHECK_PATH);
+    let path = cnConfig.get(name, "HEALTHCHECK_PATH", DEFAULT_HEALTHCHECK_PATH);
 
-    this.info(`Adding Health Check endpoint on ${path}`);
+    log.info(`Adding Health Check endpoint on ${path}`);
 
-    this.http.router.get(path, async (ctx, next) => {
-      let healthy = await this.healthy();
+    http.router.get(path, async (ctx, next) => {
+      let healthy = await this.app.healthCheck();
 
       if (healthy) {
         ctx.status = 200;
@@ -147,13 +138,5 @@ class CNShell {
 
       await next();
     });
-  }
-
-  async healthy() {
-    // This is a default health check which should be overridden if something
-    // more advanced is required
-    return HEALTHY;
-  }
-}
-
-module.exports = CNShell;
+  },
+};

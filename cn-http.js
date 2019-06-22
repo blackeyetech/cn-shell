@@ -3,13 +3,9 @@
 const DEFAULT_PORT = "8000";
 const DEFAULT_INTERFACE = "localhost";
 
-const CNLogger = require("./cn-logger.js");
-const CNConfig = require("./cn-config.js");
+const cnConfig = require("./cn-config.js");
 const Koa = require("koa");
 const KoaRouter = require("koa-router");
-
-const net = require("net");
-const os = require("os");
 
 class UserError extends Error {
   constructor(msg) {
@@ -36,8 +32,8 @@ class CNHttp {
   }
 
   start() {
-    let httpif = CNConfig.getCfg(this.name, "INTERFACE", DEFAULT_INTERFACE);
-    let port = CNConfig.getCfg(this.name, "PORT", DEFAULT_PORT);
+    let httpif = cnConfig.get(this.name, "INTERFACE", DEFAULT_INTERFACE);
+    let port = cnConfig.get(this.name, "PORT", DEFAULT_PORT);
 
     this.app.use(this.router.routes());
 
