@@ -13,6 +13,8 @@ const NODE_ENV =
 
 const version = require("./package.json").version;
 
+const CNApp = require("./cn-app.js");
+
 const CNLogger = require("./cn-logger.js");
 const CNHttp = require("./cn-http.js");
 const cnConfig = require("./cn-config.js");
@@ -140,3 +142,5 @@ global.cns = {
     });
   },
 };
+
+module.exports = CNApp;
