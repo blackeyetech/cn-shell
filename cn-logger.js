@@ -51,6 +51,11 @@ class CNLogger {
     }
   }
 
+  stdout(...args) {
+    // No formatting
+    process.stdout.write(...args);
+  }
+
   setLevel(logLevel) {
     if (logLevel === QUIET_LEVEL) {
       this.level = LOG_QUIET;

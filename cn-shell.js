@@ -65,6 +65,10 @@ global.cns = {
     log.trace(...args);
   },
 
+  stdout(...args) {
+    log.stdout(...args);
+  },
+
   cfg(config, defaultVal) {
     return cnConfig.get(name, config, defaultVal);
   },
