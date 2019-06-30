@@ -14,6 +14,7 @@ const NODE_ENV =
 const version = require("./package.json").version;
 
 const CNApp = require("./cn-app.js");
+const CNExt = require("./cn-ext.js");
 
 const CNLogger = require("./cn-logger.js");
 const CNHttp = require("./cn-http.js");
@@ -26,7 +27,7 @@ let log = new CNLogger(
 );
 let http = new CNHttp(name, log);
 
-let extensions = {};
+let exts = {};
 
 global.cns = {
   get name() {
@@ -85,14 +86,13 @@ global.cns = {
     return value;
   },
 
-  registerExt(name, extension) {
-    this.info("Registering extension: %s", name);
-
-    extensions[name] = extension;
+  registerExt(ext) {
+    this.info("Registering extension: %s", ext.name);
+    exts[name] = ext.extension;
   },
 
   get ext() {
-    return extensions;
+    return exts;
   },
 
   registerApp(app) {
@@ -147,4 +147,4 @@ global.cns = {
   },
 };
 
-module.exports = CNApp;
+module.exports = { CNApp, CNExt };
