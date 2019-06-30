@@ -4,7 +4,7 @@ const HEALTHY = true;
 
 class CNExt {
   constructor(name) {
-    this.name;
+    this.name = name;
   }
 }
 
