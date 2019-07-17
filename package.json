@@ -45,15 +45,15 @@
   "author": "Black Eye Technology",
   "license": "MIT",
   "devDependencies": {
-    "@types/koa": "^2.0.49",
-    "@types/koa-router": "^7.0.42",
-    "@types/node": "^12.6.8",
     "husky": "^3.0.0",
     "lint-staged": "^9.2.0",
     "prettier": "^1.18.2",
     "typescript": "^3.5.3"
   },
   "dependencies": {
+    "@types/koa": "^2.0.49",
+    "@types/koa-router": "^7.0.42",
+    "@types/node": "^12.6.8",
     "koa": "^2.7.0",
     "koa-router": "^7.4.0"
   },

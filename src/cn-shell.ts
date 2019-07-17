@@ -218,7 +218,7 @@ abstract class CNShell {
     });
   }
 
-  addHealthEndpoint(): void {
+  private addHealthEndpoint(): void {
     let path = this.getCfg("HEALTHCHECK_PATH", DEFAULT_HEALTHCHECK_PATH);
 
     this.info(`Adding Health Check endpoint on ${path}`);
