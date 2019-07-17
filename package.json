@@ -2,10 +2,13 @@
   "version": "1.8.1",
   "name": "cn-shell",
   "description": "Cloud Native Shell",
-  "main": "cn-shell.js",
+  "main": "./dist/cn-shell.js",
   "bin": "",
+  "files": [
+    "dist/**/*"
+  ],
   "lint-staged": {
-    "**/*.js": [
+    "src/**/*.ts": [
       "prettier --write",
       "git add"
     ],
@@ -23,11 +26,15 @@
     "trailingComma": "all"
   },
   "scripts": {
-    "check-staged": "lint-staged",
-    "format": "prettier --write '**/*.{js,json,md,yaml}'",
+    "build": "tsc",
+    "format-ts": "prettier --write 'src/**/*.ts'",
+    "format-js": "prettier --write 'dist/**/*.{js,ts}'",
+    "format-misc": "prettier --write '**/*.{json,md,yaml}'",
     "install-bin": "npm install -g $(npm pack . | tail -1)",
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "precommit": "lint-staged"
+    "test": "echo \"No tests\" && exit 0",
+    "clean": "rm -rf ./dist",
+    "prepare": "npm run clean && npm run format-ts && npm run format-misc && tsc",
+    "prepublishOnly": "npm run format-js && npm test"
   },
   "engines": {
     "node": ">=8.0.0"
@@ -38,13 +45,15 @@
   "author": "Black Eye Technology",
   "license": "MIT",
   "devDependencies": {
-    "husky": "^0.14.3",
-    "lint-staged": "^7.2.0",
-    "prettier": "^1.13.7"
+    "@types/koa": "^2.0.49",
+    "@types/koa-router": "^7.0.42",
+    "@types/node": "^12.6.8",
+    "husky": "^3.0.0",
+    "lint-staged": "^9.2.0",
+    "prettier": "^1.18.2",
+    "typescript": "^3.5.3"
   },
   "dependencies": {
-    "@types/koa": "^2.0.48",
-    "@types/koa-router": "^7.0.42",
     "koa": "^2.7.0",
     "koa-router": "^7.4.0"
   },

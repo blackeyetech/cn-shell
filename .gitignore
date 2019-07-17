@@ -3,3 +3,5 @@
 # node directories and files
 node_modules/
 npm-debug.log
+# The transpiled TypeScript code
+dist/
