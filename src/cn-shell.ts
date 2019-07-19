@@ -276,4 +276,4 @@ abstract class CNShell {
   }
 }
 
-export { CNShell, CNLogLevel, CNExtension };
+export { CNShell, CNLogger, CNLogLevel, CNExtension };
