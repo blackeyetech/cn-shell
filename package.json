@@ -40,7 +40,11 @@
     "node": ">=8.0.0"
   },
   "keywords": [
-    "Cloud Native"
+    "Cloud",
+    "Native",
+    "Application",
+    "Framework",
+    "CNA"
   ],
   "author": "Black Eye Technology",
   "license": "MIT",
