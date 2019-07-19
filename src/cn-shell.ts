@@ -1,44 +1,64 @@
+// imports here
 import { CNLogger, CNLogLevel } from "./cn-logger";
+import CNLoggerConsole from "./cn-logger-console";
 import CNExtension from "./cn-extension";
 
 import Koa from "koa";
 import KoaRouter from "koa-router";
 import * as net from "net";
 
+// Config consts here
+const CFG_LOGGER: string = "LOGGER";
 const CFG_LOG_LEVEL: string = "LOG_LEVEL";
+
+const CFG_PORT: string = "PORT";
+const CFG_INTERFACE: string = "INTERFACE";
+
+// Config defaults here
+const DEFAULT_LOGGER: string = "CONSOLE";
 const DEFAULT_LOG_LEVEL: string = "INFO";
 
 const DEFAULT_PORT: string = "8000";
 const DEFAULT_INTERFACE: string = "localhost";
 const DEFAULT_HEALTHCHECK_PATH: string = "/healthcheck";
 
-const cnsVersion: string = require("../package.json").version;
+// Misc consts here
+const version: string = require("../package.json").version;
 const NODE_ENV: string =
   process.env.NODE_ENV === undefined ? "development" : process.env.NODE_ENV;
 
-interface BasicAuth {
-  username: string;
-  password: string;
-}
-
+// CNShell class here
 abstract class CNShell {
+  // Properties here
   private readonly _name: string;
   private _logger: CNLogger;
   private _app: Koa;
   private _router: KoaRouter;
   private _server: net.Server;
-  private readonly _cnsVersion: string;
+  private readonly _version: string;
   private _extsMap: { [key: string]: CNExtension };
-  private _extsArray: CNExtension[];
 
-  constructor(name: string, logger: CNLogger) {
+  // Constructor here
+  constructor(name: string) {
     this._name = name;
-    this._logger = logger;
     this._app = new Koa();
     this._router = new KoaRouter();
-    this._cnsVersion = cnsVersion;
+    this._version = version;
     this._extsMap = {};
-    this._extsArray = [];
+
+    let logger: string = this.getCfg(CFG_LOGGER, DEFAULT_LOGGER);
+    switch (logger.toUpperCase()) {
+      case "CONSOLE":
+        this._logger = new CNLoggerConsole();
+        break;
+      default:
+        this._logger = new CNLoggerConsole();
+        this._logger.warn(
+          "CNShell",
+          `Logger ${logger} is unknown. Using console logger.`,
+        );
+        break;
+    }
 
     let logLevel: string = this.getCfg(CFG_LOG_LEVEL, DEFAULT_LOG_LEVEL);
 
@@ -60,89 +80,107 @@ abstract class CNShell {
         break;
       default:
         this._logger.level = CNLogLevel.LOG_INFO;
-        this.warn(`CNLogLevel ${logLevel} is unknown. Setting level to INFO.`);
+        this._logger.warn(
+          "CNShell",
+          `LogLevel ${logLevel} is unknown. Setting level to INFO.`,
+        );
         break;
     }
   }
 
+  // Abstract methods here
+  abstract async start(): Promise<boolean>;
   abstract async stop(): Promise<void>;
   abstract async healthCheck(): Promise<boolean>;
 
+  // Getters here
   get name(): string {
     return this._name;
   }
 
-  get cnsVersion() {
-    return this._cnsVersion;
+  get version() {
+    return this._version;
   }
 
   get router() {
     return this._router;
   }
 
+  // Setters here
   set level(level: CNLogLevel) {
     this._logger.level = level;
   }
 
-  async init() {
-    this.info("Initialising ...");
-    this.info(`CNShell Version (${this._cnsVersion})`);
-    this.info(`NODE_ENV (${NODE_ENV})`);
+  // Public methods here
+  async init(testing?: boolean) {
+    this._logger.info("CNShell", "Initialising ...");
+    this._logger.info("CNShell", `Version (${this._version})`);
+    this._logger.info("CNShell", `NODE_ENV (${NODE_ENV})`);
 
-    this.info("Setting up event handler for SIGINT and SIGTERM");
+    this._logger.info(
+      "CNShell",
+      "Setting up event handler for SIGINT and SIGTERM",
+    );
     process.on("SIGINT", async () => await this.exit());
     process.on("SIGTERM", async () => await this.exit());
 
-    let httpif: string = this.getCfg("INTERFACE", DEFAULT_INTERFACE);
-    let port: string = this.getCfg("PORT", DEFAULT_PORT);
+    this.addHealthCheckEndpoint();
+
+    this._logger.info("CNShell", "Attempting to start application ...");
+    let started = await this.start().catch(e => {
+      this.error(e);
+    });
+
+    if (!started) {
+      this._logger.info(
+        "CNShell",
+        "Heuston, we have a problem. Shutting down now ...",
+      );
+
+      if (testing) {
+        await this.exit(false);
+        return;
+      }
+
+      await this.exit();
+    }
+
+    this._logger.info("CNShell", "Initialising HTTP interface ...");
 
     this._app.use(this._router.routes());
 
-    this.info(`Starting to listening on (${httpif}:${port})`);
+    let httpif: string = this.getCfg(CFG_INTERFACE, DEFAULT_INTERFACE);
+    let port: string = this.getCfg(CFG_PORT, DEFAULT_PORT);
+
+    this._logger.info(
+      "CNShell",
+      `Attempting to listening on (${httpif}:${port})`,
+    );
     this._server = this._app.listen(parseInt(port, 10), httpif);
-    this.info("Now listening!");
-    this.addHealthEndpoint();
+    this._logger.info("CNShell", "Now listening!");
 
-    // TODO: Start the exntensions in the order the were added
-    this.info("Ready to Rock and Roll!");
+    this._logger.info("CNShell", "Ready to Rock and Roll baby!");
   }
 
-  async exit(): Promise<void> {
-    this.info("Exiting ...");
+  async exit(hard: boolean = true): Promise<void> {
+    this._logger.info("CNShell", "Exiting ...");
 
-    this.info("Closing HTTP port on server now ...");
-    this._server.close();
-    this.info("Port closed");
+    if (this._server !== undefined) {
+      this._logger.info("CNShell", "Closing HTTP port on server now ...");
+      this._server.close();
+      this._logger.info("CNShell", "Port closed");
+    }
 
-    await this.stop();
+    this._logger.info("CNShell", "Attempting to stop application ...");
+    await this.stop().catch(e => {
+      this.error(e);
+    });
 
-    this.info("So long and thanks for all the fish!");
+    this._logger.info("CNShell", "So long and thanks for all the fish!");
 
-    process.exit();
-  }
-
-  fatal(...args: any): void {
-    this._logger.fatal(...args);
-  }
-
-  error(...args: any): void {
-    this._logger.error(...args);
-  }
-
-  warn(...args: any): void {
-    this._logger.warn(...args);
-  }
-
-  info(...args: any): void {
-    this._logger.info(...args);
-  }
-
-  debug(...args: any): void {
-    this._logger.debug(...args);
-  }
-
-  trace(...args: any): void {
-    this._logger.trace(...args);
+    if (hard) {
+      process.exit();
+    }
   }
 
   getCfg(config: string, defaultVal: string = ""): string {
@@ -168,43 +206,41 @@ abstract class CNShell {
     return value;
   }
 
+  fatal(...args: any): void {
+    this._logger.fatal(this._name, ...args);
+  }
+
+  error(...args: any): void {
+    this._logger.error(this._name, ...args);
+  }
+
+  warn(...args: any): void {
+    this._logger.warn(this._name, ...args);
+  }
+
+  info(...args: any): void {
+    this._logger.info(this._name, ...args);
+  }
+
+  debug(...args: any): void {
+    this._logger.debug(this._name, ...args);
+  }
+
+  trace(...args: any): void {
+    this._logger.trace(this._name, ...args);
+  }
+
+  force(...args: any): void {
+    this._logger.force(this._name, ...args);
+  }
+
   registerExt(ext: CNExtension) {
     this.info("Registering extension: %s", ext.name);
     this._extsMap[ext.name] = ext;
-    this._extsArray.push(ext);
   }
 
   getExt(name: string): CNExtension {
     return this._extsMap[name];
-  }
-
-  getBasicAuth(ctx: Koa.Context): BasicAuth | null {
-    let basic: string = ctx.header("Authorization");
-    if (basic === undefined) {
-      return null;
-    }
-
-    let parts: string[] = basic.split(/ +/);
-    if (parts.length !== 2 || parts[0].toLowerCase() !== "basic") {
-      return null;
-    }
-
-    let credentials: string = Buffer.from(parts[1], "base64").toString("ascii");
-
-    // NOTE: There may be no password so length may be 1 or 2
-    let pair: string[] = credentials.split(":");
-    if (pair.length > 2) {
-      return null;
-    }
-
-    let username: string = pair[0];
-    let password: string = "";
-
-    if (pair.length === 2) {
-      password = pair[1];
-    }
-
-    return { username, password };
   }
 
   staticResponseRoute(path: string, response: string): void {
@@ -218,13 +254,16 @@ abstract class CNShell {
     });
   }
 
-  private addHealthEndpoint(): void {
+  // Private methods here
+  private addHealthCheckEndpoint(): void {
     let path = this.getCfg("HEALTHCHECK_PATH", DEFAULT_HEALTHCHECK_PATH);
 
-    this.info(`Adding Health Check endpoint on ${path}`);
+    this._logger.info("CNShell", `Adding Health Check endpoint on ${path}`);
 
     this.router.get(path, async (ctx, next) => {
-      let healthy = await this.healthCheck();
+      let healthy = await this.healthCheck().catch(e => {
+        this.error(e);
+      });
 
       if (healthy) {
         ctx.status = 200;
@@ -237,4 +276,4 @@ abstract class CNShell {
   }
 }
 
-export default CNShell;
+export { CNShell, CNLogLevel, CNExtension };
