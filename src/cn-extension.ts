@@ -1,16 +1,16 @@
 // Imports here
-import { CNLogger } from "./cn-logger";
+import CNShell from "./cn-shell";
 
 // CNExtension class here
 abstract class CNExtension {
   // Properties here
   private readonly _name: string;
-  private _logger: CNLogger;
+  private readonly _shell: CNShell;
 
   // Constructor here
-  constructor(name: string, logger: CNLogger) {
+  constructor(name: string, shell: CNShell) {
     this._name = name;
-    this._logger = logger;
+    this._shell = shell;
   }
 
   // Getters here
@@ -20,31 +20,39 @@ abstract class CNExtension {
 
   // Public methods here
   fatal(...args: any): void {
-    this._logger.fatal(this._name, ...args);
+    this._shell.logger.fatal(this._name, ...args);
   }
 
   error(...args: any): void {
-    this._logger.error(this._name, ...args);
+    this._shell.logger.error(this._name, ...args);
   }
 
   warn(...args: any): void {
-    this._logger.warn(this._name, ...args);
+    this._shell.logger.warn(this._name, ...args);
   }
 
   info(...args: any): void {
-    this._logger.info(this._name, ...args);
+    this._shell.logger.info(this._name, ...args);
   }
 
   debug(...args: any): void {
-    this._logger.debug(this._name, ...args);
+    this._shell.logger.debug(this._name, ...args);
   }
 
   trace(...args: any): void {
-    this._logger.trace(this._name, ...args);
+    this._shell.logger.trace(this._name, ...args);
   }
 
   force(...args: any): void {
-    this._logger.force(this._name, ...args);
+    this._shell.logger.force(this._name, ...args);
+  }
+
+  getCfg(config: string, defaultVal: string = ""): string {
+    return this._shell.getCfg(config, defaultVal);
+  }
+
+  getRequiredCfg(config: string): string {
+    return this._shell.getRequiredCfg(config);
   }
 }
 

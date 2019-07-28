@@ -1,4 +1,4 @@
-import { CNLogger, CNLogLevel } from "./cn-logger";
+import CNLogger from "./cn-logger";
 
 class CNLoggerConsole extends CNLogger {
   constructor() {
@@ -7,7 +7,7 @@ class CNLoggerConsole extends CNLogger {
 
   fatal(label: string, ...args: any): void {
     // fatals are always logged unless level = LOG_COMPLETE_SILENCE
-    if (this._level <= CNLogLevel.LOG_QUIET) {
+    if (this._level <= CNLogger.CNLogLevel.LOG_QUIET) {
       args[0] = `FATAL: ${label}: ${args[0]}`;
       console.error(...args);
     }
@@ -15,7 +15,7 @@ class CNLoggerConsole extends CNLogger {
 
   error(label: string, ...args: any): void {
     // errors are always logged unless level = LOG_COMPLETE_SILENCE
-    if (this._level <= CNLogLevel.LOG_QUIET) {
+    if (this._level <= CNLogger.CNLogLevel.LOG_QUIET) {
       args[0] = `ERROR: ${label}: ${args[0]}`;
       console.error(...args);
     }
@@ -23,28 +23,28 @@ class CNLoggerConsole extends CNLogger {
 
   warn(label: string, ...args: any): void {
     // warnings are always logged unless level = LOG_COMPLETE_SILENCE
-    if (this._level <= CNLogLevel.LOG_QUIET) {
+    if (this._level <= CNLogger.CNLogLevel.LOG_QUIET) {
       args[0] = `WARN: ${label}: ${args[0]}`;
       console.warn(...args);
     }
   }
 
   info(label: string, ...args: any): void {
-    if (this._level <= CNLogLevel.LOG_INFO) {
+    if (this._level <= CNLogger.CNLogLevel.LOG_INFO) {
       args[0] = `INFO: ${label}: ${args[0]}`;
       console.info(...args);
     }
   }
 
   debug(label: string, ...args: any): void {
-    if (this._level <= CNLogLevel.LOG_DEBUG) {
+    if (this._level <= CNLogger.CNLogLevel.LOG_DEBUG) {
       args[0] = `DEBUG: ${label}: ${args[0]}`;
       console.info(...args);
     }
   }
 
   trace(label: string, ...args: any): void {
-    if (this._level <= CNLogLevel.LOG_TRACE) {
+    if (this._level <= CNLogger.CNLogLevel.LOG_TRACE) {
       args[0] = `TRACE: ${label}: ${args[0]}`;
       console.info(...args);
     }

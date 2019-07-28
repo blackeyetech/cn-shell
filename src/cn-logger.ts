@@ -25,6 +25,10 @@ abstract class CNLogger {
   set level(level: CNLogLevel) {
     this._level = level;
   }
+
+  static get CNLogLevel(): typeof CNLogLevel {
+    return CNLogLevel;
+  }
 }
 
-export { CNLogger, CNLogLevel };
+export default CNLogger;

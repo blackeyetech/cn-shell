@@ -1,4 +1,4 @@
-import { CNShell, CNLogLevel } from "./cn-shell";
+import CNShell from "./cn-shell";
 
 class App1 extends CNShell {
   constructor(name: string) {
@@ -16,10 +16,10 @@ class App1 extends CNShell {
   }
 
   logging() {
-    this.level = CNLogLevel.LOG_INFO;
+    this.level = CNShell.CNLogLevel.LOG_INFO;
     this.info("Setting level to COMPLETE_SILENCE");
     this.info("You should see: forced");
-    this.level = CNLogLevel.LOG_COMPLETE_SILENCE;
+    this.level = CNShell.CNLogLevel.LOG_COMPLETE_SILENCE;
 
     this.warn("You shouldn't see this");
     this.error("You shouldn't see this");
@@ -30,10 +30,10 @@ class App1 extends CNShell {
     this.force("You should see this");
     this.force("Done");
 
-    this.level = CNLogLevel.LOG_INFO;
+    this.level = CNShell.CNLogLevel.LOG_INFO;
     this.info("Setting level to QUIET");
     this.info("You should see: warn, error, fatal");
-    this.level = CNLogLevel.LOG_QUIET;
+    this.level = CNShell.CNLogLevel.LOG_QUIET;
 
     this.warn("You should see this");
     this.error("You should see this");
@@ -43,10 +43,10 @@ class App1 extends CNShell {
     this.trace("You shouldn't see this");
     this.force("Done");
 
-    this.level = CNLogLevel.LOG_INFO;
+    this.level = CNShell.CNLogLevel.LOG_INFO;
     this.info("Setting level to INFO");
     this.info("You should see: warn, error, fatal, info");
-    this.level = CNLogLevel.LOG_INFO;
+    this.level = CNShell.CNLogLevel.LOG_INFO;
 
     this.warn("You should see this");
     this.error("You should see this");
@@ -56,10 +56,10 @@ class App1 extends CNShell {
     this.trace("You shouldn't see this");
     this.force("Done");
 
-    this.level = CNLogLevel.LOG_INFO;
+    this.level = CNShell.CNLogLevel.LOG_INFO;
     this.info("Setting level to DEBUG");
     this.info("You should see: warn, error, fatal, info, debug");
-    this.level = CNLogLevel.LOG_DEBUG;
+    this.level = CNShell.CNLogLevel.LOG_DEBUG;
 
     this.warn("You should see this");
     this.error("You should see this");
@@ -69,10 +69,10 @@ class App1 extends CNShell {
     this.trace("You shouldn't see this");
     this.force("Done");
 
-    this.level = CNLogLevel.LOG_INFO;
+    this.level = CNShell.CNLogLevel.LOG_INFO;
     this.info("Setting level to TRACE");
     this.info("You should see: warn, error, fatal, info, debug, trace");
-    this.level = CNLogLevel.LOG_TRACE;
+    this.level = CNShell.CNLogLevel.LOG_TRACE;
 
     this.warn("You should see this");
     this.error("You should see this");

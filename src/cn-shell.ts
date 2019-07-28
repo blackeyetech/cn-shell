@@ -1,26 +1,39 @@
 // imports here
-import { CNLogger, CNLogLevel } from "./cn-logger";
+import CNLogger from "./cn-logger";
 import CNLoggerConsole from "./cn-logger-console";
 import CNExtension from "./cn-extension";
 
 import Koa from "koa";
 import KoaRouter from "koa-router";
 import * as net from "net";
+// import koaHelmet from "koa-helmet";
+import koaBodyparser from "koa-bodyparser";
+import koaMulter from "koa-multer";
+
+import { Readable } from "stream";
 
 // Config consts here
-const CFG_LOGGER: string = "LOGGER";
-const CFG_LOG_LEVEL: string = "LOG_LEVEL";
+const CFG_LOGGER = "LOGGER";
+const CFG_LOG_LEVEL = "LOG_LEVEL";
 
-const CFG_PORT: string = "PORT";
-const CFG_INTERFACE: string = "INTERFACE";
+const CFG_HTTP_PORT = "HTTP_PORT";
+const CFG_HTTP_INTERFACE = "HTTP_INTERFACE";
+const CFG_HEALTHCHECK_PATH = "HEALTHCHECK_PATH";
 
 // Config defaults here
-const DEFAULT_LOGGER: string = "CONSOLE";
-const DEFAULT_LOG_LEVEL: string = "INFO";
+const DEFAULT_LOGGER = "CONSOLE";
+const DEFAULT_LOG_LEVEL = "INFO";
 
-const DEFAULT_PORT: string = "8000";
-const DEFAULT_INTERFACE: string = "localhost";
-const DEFAULT_HEALTHCHECK_PATH: string = "/healthcheck";
+const DEFAULT_HTTP_PORT = "8000";
+const DEFAULT_HTTP_INTERFACE = "eth0";
+const DEFAULT_HEALTHCHECK_PATH = "/healthcheck";
+
+// HTTP content type consts here
+const HTTP_CONTENT_TYPE_JSON = "application/json";
+const HTTP_CONTENT_TYPE_XLSX =
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+
+let acceptContentTypes = [HTTP_CONTENT_TYPE_JSON, HTTP_CONTENT_TYPE_XLSX];
 
 // Misc consts here
 const version: string = require("../package.json").version;
@@ -35,16 +48,20 @@ abstract class CNShell {
   private _app: Koa;
   private _router: KoaRouter;
   private _server: net.Server;
+  private _maxRowLimit: number;
+
   private readonly _version: string;
-  private _extsMap: { [key: string]: CNExtension };
 
   // Constructor here
   constructor(name: string) {
     this._name = name;
     this._app = new Koa();
     this._router = new KoaRouter();
+    // this._app.use(koaHelmet());
+    this._app.use(koaBodyparser());
+    this._maxRowLimit = 1000;
+
     this._version = version;
-    this._extsMap = {};
 
     let logger: string = this.getCfg(CFG_LOGGER, DEFAULT_LOGGER);
     switch (logger.toUpperCase()) {
@@ -64,28 +81,40 @@ abstract class CNShell {
 
     switch (logLevel.toUpperCase()) {
       case "SILENT":
-        this._logger.level = CNLogLevel.LOG_COMPLETE_SILENCE;
+        this._logger.level = CNLogger.CNLogLevel.LOG_COMPLETE_SILENCE;
         break;
       case "QUIET":
-        this._logger.level = CNLogLevel.LOG_QUIET;
+        this._logger.level = CNLogger.CNLogLevel.LOG_QUIET;
         break;
       case "INFO":
-        this._logger.level = CNLogLevel.LOG_INFO;
+        this._logger.level = CNLogger.CNLogLevel.LOG_INFO;
         break;
       case "DEBUG":
-        this._logger.level = CNLogLevel.LOG_DEBUG;
+        this._logger.level = CNLogger.CNLogLevel.LOG_DEBUG;
         break;
       case "TRACE":
-        this._logger.level = CNLogLevel.LOG_TRACE;
+        this._logger.level = CNLogger.CNLogLevel.LOG_TRACE;
         break;
       default:
-        this._logger.level = CNLogLevel.LOG_INFO;
+        this._logger.level = CNLogger.CNLogLevel.LOG_INFO;
         this._logger.warn(
           "CNShell",
           `LogLevel ${logLevel} is unknown. Setting level to INFO.`,
         );
         break;
     }
+  }
+
+  static get CNLogLevel(): typeof CNLogger.CNLogLevel {
+    return CNLogger.CNLogLevel;
+  }
+
+  static get CNLogger(): typeof CNLogger {
+    return CNLogger;
+  }
+
+  static get CNExtension(): typeof CNExtension {
+    return CNExtension;
   }
 
   // Abstract methods here
@@ -106,8 +135,16 @@ abstract class CNShell {
     return this._router;
   }
 
+  get app() {
+    return this._app;
+  }
+
+  get logger() {
+    return this._logger;
+  }
+
   // Setters here
-  set level(level: CNLogLevel) {
+  set level(level: any) {
     this._logger.level = level;
   }
 
@@ -149,8 +186,11 @@ abstract class CNShell {
 
     this._app.use(this._router.routes());
 
-    let httpif: string = this.getCfg(CFG_INTERFACE, DEFAULT_INTERFACE);
-    let port: string = this.getCfg(CFG_PORT, DEFAULT_PORT);
+    let httpif: string = this.getCfg(
+      CFG_HTTP_INTERFACE,
+      DEFAULT_HTTP_INTERFACE,
+    );
+    let port: string = this.getCfg(CFG_HTTP_PORT, DEFAULT_HTTP_PORT);
 
     this._logger.info(
       "CNShell",
@@ -234,17 +274,11 @@ abstract class CNShell {
     this._logger.force(this._name, ...args);
   }
 
-  registerExt(ext: CNExtension) {
-    this.info("Registering extension: %s", ext.name);
-    this._extsMap[ext.name] = ext;
-  }
-
-  getExt(name: string): CNExtension {
-    return this._extsMap[name];
-  }
-
+  // http koa help methods here
   staticResponseRoute(path: string, response: string): void {
-    this.info(`Adding static response GET route on path ${path}`);
+    path = `/${path.replace(/^\/+/, "").replace(/\/+$/, "")}`;
+
+    this.info(`Adding static response route on path ${path}`);
 
     this._router.get(path, async (ctx, next) => {
       ctx.status = 200;
@@ -254,9 +288,187 @@ abstract class CNShell {
     });
   }
 
+  uploadSingleFileRoute(
+    path: string,
+    fieldName: string,
+    cb: (file: string) => void,
+    maxFileSize: number = 1024 * 1024 * 4,
+    dest: string = "/tmp",
+  ) {
+    path = `/${path.replace(/^\/+/, "").replace(/\/+$/, "")}`;
+
+    this.info(`Adding single file upload route on path ${path}`);
+
+    let multer = koaMulter({ dest: dest, limits: { fileSize: maxFileSize } });
+
+    this._router.post(path, async (ctx: any, next) => {
+      await multer.single(fieldName)(ctx, next);
+      let response = await cb(ctx.req.file.path);
+
+      ctx.status = 200;
+
+      if (response !== undefined) {
+        ctx.type = "application/json; charset=utf-8";
+        ctx.body = JSON.stringify(response);
+      }
+
+      await next();
+    });
+  }
+
+  sendChunkedArray(ctx: Koa.Context, data: object[]): Promise<any> {
+    return new Promise(resolve => {
+      let body = new Readable();
+      body._read = function() {};
+
+      ctx.type = "application/json; charset=utf-8";
+      ctx.body = body;
+
+      body.push("[\n");
+
+      let i = 0;
+      let cb = async () => {
+        while (i < data.length) {
+          body.push(JSON.stringify(data[i]));
+          if (i !== data.length - 1) {
+            body.push(",\n");
+          } else {
+            body.push("\n");
+          }
+
+          i++;
+
+          if (i % this._maxRowLimit === 0) {
+            setImmediate(cb);
+            return;
+          }
+        }
+
+        body.push("]");
+        body.push(null);
+        resolve();
+      };
+
+      cb();
+    });
+  }
+
+  createRoute(path: string, cb: (body: object) => Promise<number>): void {
+    path = `/${path.replace(/^\/+/, "").replace(/\/+$/, "")}`;
+
+    this.info(`Adding create route on path ${path}`);
+
+    this._router.post(path, async (ctx, next) => {
+      let id = await cb(ctx.request.body);
+
+      ctx.set("Location", `${ctx.origin}${ctx.url}/${id}`);
+      ctx.status = 201;
+
+      await next();
+    });
+  }
+
+  readRoute(
+    path: string,
+    cb: (query: string[], accepts: string, id?: string) => any,
+    id?: string,
+  ) {
+    path = `/${path.replace(/^\/+/, "").replace(/\/+$/, "")}`;
+
+    if (id !== undefined) {
+      path = `${path}/:${id}`;
+    }
+
+    this.info(`Adding read route on path ${path}`);
+
+    this._router.get(path, async (ctx, next) => {
+      let accepts = ctx.accepts(acceptContentTypes);
+      let data: any;
+
+      if (typeof accepts === "boolean") {
+        ctx.status = 406;
+        await next();
+        return;
+      }
+
+      data = await cb(
+        ctx.query,
+        accepts,
+        id !== undefined ? ctx.params[id] : undefined,
+      );
+
+      switch (accepts) {
+        case HTTP_CONTENT_TYPE_XLSX:
+          ctx.type = HTTP_CONTENT_TYPE_XLSX;
+          ctx.set("Content-Disposition", `attachment; filename=${data.name}`);
+
+          ctx.status = 200;
+          ctx.body = data.buffer;
+          break;
+
+        case HTTP_CONTENT_TYPE_JSON:
+          ctx.type = "application/json; charset=utf-8";
+
+          if (Array.isArray(data) && data.length > this._maxRowLimit) {
+            ctx.set("Transfer-Encoding", "chunked");
+            await this.sendChunkedArray(ctx, data);
+          } else {
+            ctx.status = 200;
+            ctx.body = JSON.stringify(data);
+          }
+
+          break;
+        default:
+          ctx.status = 406;
+      }
+
+      await next();
+    });
+  }
+
+  updateRoute(
+    path: string,
+    cb: (body: any, id?: string) => void,
+    id?: string,
+  ): void {
+    path = `/${path.replace(/^\/+/, "").replace(/\/+$/, "")}`;
+
+    if (id !== undefined) {
+      path = `${path}/:${id}`;
+    }
+
+    this.info(`Adding update route on path ${path}`);
+
+    this._router.put(path, async (ctx, next) => {
+      await cb(ctx.request.body, id !== undefined ? ctx.params[id] : undefined);
+
+      ctx.status = 200;
+
+      await next();
+    });
+  }
+
+  deleteRoute(path: string, cb: (id?: string) => void, id?: string): void {
+    path = `/${path.replace(/^\/+/, "").replace(/\/+$/, "")}`;
+
+    if (id !== undefined) {
+      path = `${path}/:${id}`;
+    }
+
+    this.info(`Adding delete route on path ${path}`);
+
+    this._router.delete(path, async (ctx, next) => {
+      await cb(id !== undefined ? ctx.params[id] : undefined);
+
+      ctx.status = 200;
+
+      await next();
+    });
+  }
+
   // Private methods here
   private addHealthCheckEndpoint(): void {
-    let path = this.getCfg("HEALTHCHECK_PATH", DEFAULT_HEALTHCHECK_PATH);
+    let path = this.getCfg(CFG_HEALTHCHECK_PATH, DEFAULT_HEALTHCHECK_PATH);
 
     this._logger.info("CNShell", `Adding Health Check endpoint on ${path}`);
 
@@ -276,4 +488,4 @@ abstract class CNShell {
   }
 }
 
-export { CNShell, CNLogger, CNLogLevel, CNExtension };
+export default CNShell;
