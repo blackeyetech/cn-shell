@@ -1,7 +1,6 @@
 // imports here
 import CNLogger from "./cn-logger";
 import CNLoggerConsole from "./cn-logger-console";
-import CNExtension from "./cn-extension";
 
 import Koa from "koa";
 import KoaRouter from "koa-router";
@@ -33,12 +32,67 @@ const HTTP_CONTENT_TYPE_JSON = "application/json";
 const HTTP_CONTENT_TYPE_XLSX =
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 
-let acceptContentTypes = [HTTP_CONTENT_TYPE_JSON, HTTP_CONTENT_TYPE_XLSX];
+const ACCEPT_CONTENT_TYPES = [HTTP_CONTENT_TYPE_JSON, HTTP_CONTENT_TYPE_XLSX];
 
 // Misc consts here
 const version: string = require("../package.json").version;
 const NODE_ENV: string =
   process.env.NODE_ENV === undefined ? "development" : process.env.NODE_ENV;
+
+// CNExtension class here
+abstract class CNExtension {
+  // Properties here
+  private readonly _name: string;
+  private readonly _shell: CNShell;
+
+  // Constructor here
+  constructor(name: string, shell: CNShell) {
+    this._name = name;
+    this._shell = shell;
+  }
+
+  // Getters here
+  get name(): string {
+    return this._name;
+  }
+
+  // Public methods here
+  fatal(...args: any): void {
+    this._shell.logger.fatal(this._name, ...args);
+  }
+
+  error(...args: any): void {
+    this._shell.logger.error(this._name, ...args);
+  }
+
+  warn(...args: any): void {
+    this._shell.logger.warn(this._name, ...args);
+  }
+
+  info(...args: any): void {
+    this._shell.logger.info(this._name, ...args);
+  }
+
+  debug(...args: any): void {
+    this._shell.logger.debug(this._name, ...args);
+  }
+
+  trace(...args: any): void {
+    this._shell.logger.trace(this._name, ...args);
+  }
+
+  force(...args: any): void {
+    this._shell.logger.force(this._name, ...args);
+  }
+
+  getCfg(config: string, defaultVal: string = ""): string {
+    return this._shell.getCfg(config, defaultVal);
+  }
+
+  getRequiredCfg(config: string): string {
+    return this._shell.getRequiredCfg(config);
+  }
+}
 
 // CNShell class here
 abstract class CNShell {
@@ -48,7 +102,7 @@ abstract class CNShell {
   private _app: Koa;
   private _router: KoaRouter;
   private _server: net.Server;
-  private _maxRowLimit: number;
+  private _httpMaxSendRowsLimit: number;
 
   private readonly _version: string;
 
@@ -59,7 +113,7 @@ abstract class CNShell {
     this._router = new KoaRouter();
     // this._app.use(koaHelmet());
     this._app.use(koaBodyparser());
-    this._maxRowLimit = 1000;
+    this._httpMaxSendRowsLimit = 1000;
 
     this._version = version;
 
@@ -107,10 +161,6 @@ abstract class CNShell {
 
   static get CNLogLevel(): typeof CNLogger.CNLogLevel {
     return CNLogger.CNLogLevel;
-  }
-
-  static get CNLogger(): typeof CNLogger {
-    return CNLogger;
   }
 
   static get CNExtension(): typeof CNExtension {
@@ -175,6 +225,7 @@ abstract class CNShell {
       );
 
       if (testing) {
+        // Do a soft stop so we don't force any testing code to exit
         await this.exit(false);
         return;
       }
@@ -316,7 +367,7 @@ abstract class CNShell {
     });
   }
 
-  sendChunkedArray(ctx: Koa.Context, data: object[]): Promise<any> {
+  async sendChunkedArray(ctx: Koa.Context, data: object[]) {
     return new Promise(resolve => {
       let body = new Readable();
       body._read = function() {};
@@ -338,7 +389,7 @@ abstract class CNShell {
 
           i++;
 
-          if (i % this._maxRowLimit === 0) {
+          if (i % this._httpMaxSendRowsLimit === 0) {
             setImmediate(cb);
             return;
           }
@@ -372,7 +423,7 @@ abstract class CNShell {
     path: string,
     cb: (query: string[], accepts: string, id?: string) => any,
     id?: string,
-  ) {
+  ): void {
     path = `/${path.replace(/^\/+/, "").replace(/\/+$/, "")}`;
 
     if (id !== undefined) {
@@ -382,7 +433,7 @@ abstract class CNShell {
     this.info(`Adding read route on path ${path}`);
 
     this._router.get(path, async (ctx, next) => {
-      let accepts = ctx.accepts(acceptContentTypes);
+      let accepts = ctx.accepts(ACCEPT_CONTENT_TYPES);
       let data: any;
 
       if (typeof accepts === "boolean") {
@@ -409,7 +460,7 @@ abstract class CNShell {
         case HTTP_CONTENT_TYPE_JSON:
           ctx.type = "application/json; charset=utf-8";
 
-          if (Array.isArray(data) && data.length > this._maxRowLimit) {
+          if (Array.isArray(data) && data.length > this._httpMaxSendRowsLimit) {
             ctx.set("Transfer-Encoding", "chunked");
             await this.sendChunkedArray(ctx, data);
           } else {
