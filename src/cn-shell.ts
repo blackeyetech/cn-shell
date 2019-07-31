@@ -43,7 +43,7 @@ const NODE_ENV: string =
 abstract class CNExtension {
   // Properties here
   private readonly _name: string;
-  private readonly _shell: CNShell;
+  protected readonly _shell: CNShell;
 
   // Constructor here
   constructor(name: string, shell: CNShell) {
