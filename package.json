@@ -1,5 +1,5 @@
 {
-  "version": "1.10.2",
+  "version": "2.0.0",
   "name": "cn-shell",
   "description": "Cloud Native Shell",
   "main": "./dist/cn-shell.js",
