@@ -9,6 +9,8 @@ import * as net from "net";
 import koaBodyparser from "koa-bodyparser";
 import koaMulter from "koa-multer";
 
+import axios, { AxiosStatic } from "axios";
+
 import { Readable } from "stream";
 
 // Config consts here
@@ -54,6 +56,10 @@ abstract class CNExtension {
   // Getters here
   get name(): string {
     return this._name;
+  }
+
+  get httpReq(): AxiosStatic {
+    return axios;
   }
 
   // Public methods here
