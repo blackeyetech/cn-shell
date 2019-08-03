@@ -199,6 +199,10 @@ abstract class CNShell {
     return this._logger;
   }
 
+  get httpReq(): AxiosStatic {
+    return axios;
+  }
+
   // Setters here
   set level(level: any) {
     this._logger.level = level;
