@@ -8,19 +8,21 @@ enum CNLogLevel {
 }
 
 abstract class CNLogger {
+  protected _name: string;
   protected _level: CNLogLevel;
 
-  constructor() {
+  constructor(name: string) {
+    this._name = name;
     this._level = CNLogLevel.LOG_INFO;
   }
 
-  abstract fatal(label: string, ...args: any): void;
-  abstract error(label: string, ...args: any): void;
-  abstract warn(label: string, ...args: any): void;
-  abstract info(label: string, ...args: any): void;
-  abstract debug(label: string, ...args: any): void;
-  abstract trace(label: string, ...args: any): void;
-  abstract force(label: string, ...args: any): void;
+  abstract fatal(...args: any): void;
+  abstract error(...args: any): void;
+  abstract warn(...args: any): void;
+  abstract info(...args: any): void;
+  abstract debug(...args: any): void;
+  abstract trace(...args: any): void;
+  abstract force(...args: any): void;
 
   set level(level: CNLogLevel) {
     this._level = level;

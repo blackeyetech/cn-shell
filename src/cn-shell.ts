@@ -41,65 +41,6 @@ const version: string = require("../package.json").version;
 const NODE_ENV: string =
   process.env.NODE_ENV === undefined ? "development" : process.env.NODE_ENV;
 
-// CNExtension class here
-abstract class CNExtension {
-  // Properties here
-  private readonly _name: string;
-  protected readonly _shell: CNShell;
-
-  // Constructor here
-  constructor(name: string, shell: CNShell) {
-    this._name = name;
-    this._shell = shell;
-  }
-
-  // Getters here
-  get name(): string {
-    return this._name;
-  }
-
-  get httpReq(): AxiosStatic {
-    return axios;
-  }
-
-  // Public methods here
-  fatal(...args: any): void {
-    this._shell.logger.fatal(this._name, ...args);
-  }
-
-  error(...args: any): void {
-    this._shell.logger.error(this._name, ...args);
-  }
-
-  warn(...args: any): void {
-    this._shell.logger.warn(this._name, ...args);
-  }
-
-  info(...args: any): void {
-    this._shell.logger.info(this._name, ...args);
-  }
-
-  debug(...args: any): void {
-    this._shell.logger.debug(this._name, ...args);
-  }
-
-  trace(...args: any): void {
-    this._shell.logger.trace(this._name, ...args);
-  }
-
-  force(...args: any): void {
-    this._shell.logger.force(this._name, ...args);
-  }
-
-  getCfg(config: string, defaultVal: string = ""): string {
-    return this._shell.getCfg(config, defaultVal);
-  }
-
-  getRequiredCfg(config: string): string {
-    return this._shell.getRequiredCfg(config);
-  }
-}
-
 // CNShell class here
 abstract class CNShell {
   // Properties here
@@ -126,14 +67,11 @@ abstract class CNShell {
     let logger: string = this.getCfg(CFG_LOGGER, DEFAULT_LOGGER);
     switch (logger.toUpperCase()) {
       case "CONSOLE":
-        this._logger = new CNLoggerConsole();
+        this._logger = new CNLoggerConsole(name);
         break;
       default:
-        this._logger = new CNLoggerConsole();
-        this._logger.warn(
-          "CNShell",
-          `Logger ${logger} is unknown. Using console logger.`,
-        );
+        this._logger = new CNLoggerConsole(name);
+        this.warn(`Logger ${logger} is unknown. Using console logger.`);
         break;
     }
 
@@ -158,7 +96,6 @@ abstract class CNShell {
       default:
         this._logger.level = CNLogger.CNLogLevel.LOG_INFO;
         this._logger.warn(
-          "CNShell",
           `LogLevel ${logLevel} is unknown. Setting level to INFO.`,
         );
         break;
@@ -167,10 +104,6 @@ abstract class CNShell {
 
   static get CNLogLevel(): typeof CNLogger.CNLogLevel {
     return CNLogger.CNLogLevel;
-  }
-
-  static get CNExtension(): typeof CNExtension {
-    return CNExtension;
   }
 
   // Abstract methods here
@@ -210,29 +143,23 @@ abstract class CNShell {
 
   // Public methods here
   async init(testing?: boolean) {
-    this._logger.info("CNShell", "Initialising ...");
-    this._logger.info("CNShell", `Version (${this._version})`);
-    this._logger.info("CNShell", `NODE_ENV (${NODE_ENV})`);
+    this.info("Initialising ...");
+    this.info(`Version (${this._version})`);
+    this.info(`NODE_ENV (${NODE_ENV})`);
 
-    this._logger.info(
-      "CNShell",
-      "Setting up event handler for SIGINT and SIGTERM",
-    );
+    this.info("Setting up event handler for SIGINT and SIGTERM");
     process.on("SIGINT", async () => await this.exit());
     process.on("SIGTERM", async () => await this.exit());
 
     this.addHealthCheckEndpoint();
 
-    this._logger.info("CNShell", "Attempting to start application ...");
+    this.info("Attempting to start application ...");
     let started = await this.start().catch(e => {
       this.error(e);
     });
 
     if (!started) {
-      this._logger.info(
-        "CNShell",
-        "Heuston, we have a problem. Shutting down now ...",
-      );
+      this.info("Heuston, we have a problem. Shutting down now ...");
 
       if (testing) {
         // Do a soft stop so we don't force any testing code to exit
@@ -243,7 +170,7 @@ abstract class CNShell {
       await this.exit();
     }
 
-    this._logger.info("CNShell", "Initialising HTTP interface ...");
+    this.info("Initialising HTTP interface ...");
 
     this._app.use(this._router.routes());
 
@@ -253,31 +180,28 @@ abstract class CNShell {
     );
     let port: string = this.getCfg(CFG_HTTP_PORT, DEFAULT_HTTP_PORT);
 
-    this._logger.info(
-      "CNShell",
-      `Attempting to listening on (${httpif}:${port})`,
-    );
+    this.info(`Attempting to listening on (${httpif}:${port})`);
     this._server = this._app.listen(parseInt(port, 10), httpif);
-    this._logger.info("CNShell", "Now listening!");
+    this.info("Now listening!");
 
-    this._logger.info("CNShell", "Ready to Rock and Roll baby!");
+    this.info("Ready to Rock and Roll baby!");
   }
 
   async exit(hard: boolean = true): Promise<void> {
-    this._logger.info("CNShell", "Exiting ...");
+    this.info("Exiting ...");
 
     if (this._server !== undefined) {
-      this._logger.info("CNShell", "Closing HTTP port on server now ...");
+      this.info("Closing HTTP port on server now ...");
       this._server.close();
-      this._logger.info("CNShell", "Port closed");
+      this.info("Port closed");
     }
 
-    this._logger.info("CNShell", "Attempting to stop application ...");
+    this.info("Attempting to stop application ...");
     await this.stop().catch(e => {
       this.error(e);
     });
 
-    this._logger.info("CNShell", "So long and thanks for all the fish!");
+    this.info("So long and thanks for all the fish!");
 
     if (hard) {
       process.exit();
@@ -308,31 +232,31 @@ abstract class CNShell {
   }
 
   fatal(...args: any): void {
-    this._logger.fatal(this._name, ...args);
+    this._logger.fatal(...args);
   }
 
   error(...args: any): void {
-    this._logger.error(this._name, ...args);
+    this._logger.error(...args);
   }
 
   warn(...args: any): void {
-    this._logger.warn(this._name, ...args);
+    this._logger.warn(...args);
   }
 
   info(...args: any): void {
-    this._logger.info(this._name, ...args);
+    this._logger.info(...args);
   }
 
   debug(...args: any): void {
-    this._logger.debug(this._name, ...args);
+    this._logger.debug(...args);
   }
 
   trace(...args: any): void {
-    this._logger.trace(this._name, ...args);
+    this._logger.trace(...args);
   }
 
   force(...args: any): void {
-    this._logger.force(this._name, ...args);
+    this._logger.force(...args);
   }
 
   // http koa help methods here
@@ -531,7 +455,7 @@ abstract class CNShell {
   private addHealthCheckEndpoint(): void {
     let path = this.getCfg(CFG_HEALTHCHECK_PATH, DEFAULT_HEALTHCHECK_PATH);
 
-    this._logger.info("CNShell", `Adding Health Check endpoint on ${path}`);
+    this._logger.info(`Adding Health Check endpoint on ${path}`);
 
     this.router.get(path, async (ctx, next) => {
       let healthy = await this.healthCheck().catch(e => {
