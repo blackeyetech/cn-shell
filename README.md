@@ -16,6 +16,8 @@ cn-shell is a JS wrapper, like a shell, for cloud native applications.
   "QUIET": Disable all logging except for fatals, errors and warnings
   "SILENT": Disable all logging without exception
 
+- HTTP_KEEP_ALIVE_TIMEOUT: Use to spcify the HTTP keep alive timeout value in ms
+
 - CNA_HTTP_INTERFACE: Used to specify the interface to listen on. Default is "eth0"
 
 - CNA_HTTP_PORT: Used to specify the port to listen on. Default is "80"

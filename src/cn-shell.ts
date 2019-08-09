@@ -4,7 +4,7 @@ import CNLoggerConsole from "./cn-logger-console";
 
 import Koa from "koa";
 import KoaRouter from "koa-router";
-import * as net from "net";
+
 // import koaHelmet from "koa-helmet";
 import koaBodyparser from "koa-bodyparser";
 import koaMulter from "koa-multer";
@@ -12,11 +12,13 @@ import koaMulter from "koa-multer";
 import axios, { AxiosStatic } from "axios";
 
 import { Readable } from "stream";
+import * as http from "http";
 
 // Config consts here
 const CFG_LOGGER = "LOGGER";
 const CFG_LOG_LEVEL = "LOG_LEVEL";
 
+const CFG_HTTP_KEEP_ALIVE_TIMEOUT = "HTTP_KEEP_ALIVE_TIMEOUT";
 const CFG_HTTP_PORT = "HTTP_PORT";
 const CFG_HTTP_INTERFACE = "HTTP_INTERFACE";
 const CFG_HEALTHCHECK_PATH = "HEALTHCHECK_PATH";
@@ -25,6 +27,7 @@ const CFG_HEALTHCHECK_PATH = "HEALTHCHECK_PATH";
 const DEFAULT_LOGGER = "CONSOLE";
 const DEFAULT_LOG_LEVEL = "INFO";
 
+const DEFAULT_HTTP_KEEP_ALIVE_TIMEOUT = "65000";
 const DEFAULT_HTTP_PORT = "8000";
 const DEFAULT_HTTP_INTERFACE = "eth0";
 const DEFAULT_HEALTHCHECK_PATH = "/healthcheck";
@@ -48,7 +51,7 @@ abstract class CNShell {
   private _logger: CNLogger;
   private _app: Koa;
   private _router: KoaRouter;
-  private _server: net.Server;
+  private _server: http.Server;
   private _httpMaxSendRowsLimit: number;
 
   private readonly _version: string;
@@ -174,14 +177,21 @@ abstract class CNShell {
 
     this._app.use(this._router.routes());
 
-    let httpif: string = this.getCfg(
-      CFG_HTTP_INTERFACE,
-      DEFAULT_HTTP_INTERFACE,
-    );
-    let port: string = this.getCfg(CFG_HTTP_PORT, DEFAULT_HTTP_PORT);
+    let httpif = this.getCfg(CFG_HTTP_INTERFACE, DEFAULT_HTTP_INTERFACE);
+    let port = this.getCfg(CFG_HTTP_PORT, DEFAULT_HTTP_PORT);
 
     this.info(`Attempting to listening on (${httpif}:${port})`);
     this._server = this._app.listen(parseInt(port, 10), httpif);
+
+    // NOTE: The default node keep alive is 5 secs. This needs to be set
+    // higher then any load balancers in front of this CNA
+    let keepAlive = this.getCfg(
+      CFG_HTTP_KEEP_ALIVE_TIMEOUT,
+      DEFAULT_HTTP_KEEP_ALIVE_TIMEOUT,
+    );
+
+    this._server.keepAliveTimeout = parseInt(keepAlive, 10);
+
     this.info("Now listening!");
 
     this.info("Ready to Rock and Roll baby!");
