@@ -29,7 +29,6 @@ const DEFAULT_LOG_LEVEL = "INFO";
 
 const DEFAULT_HTTP_KEEP_ALIVE_TIMEOUT = "65000";
 const DEFAULT_HTTP_PORT = "8000";
-const DEFAULT_HTTP_INTERFACE = "eth0";
 const DEFAULT_HEALTHCHECK_PATH = "/healthcheck";
 
 // HTTP content type consts here
@@ -177,11 +176,16 @@ abstract class CNShell {
 
     this._app.use(this._router.routes());
 
-    let httpif = this.getCfg(CFG_HTTP_INTERFACE, DEFAULT_HTTP_INTERFACE);
+    let httpif = this.getCfg(CFG_HTTP_INTERFACE);
     let port = this.getCfg(CFG_HTTP_PORT, DEFAULT_HTTP_PORT);
 
-    this.info(`Attempting to listening on (${httpif}:${port})`);
-    this._server = this._app.listen(parseInt(port, 10), httpif);
+    if (http !== undefined) {
+      this.info(`Attempting to listening on (${httpif}:${port})`);
+      this._server = this._app.listen(parseInt(port, 10), httpif);
+    } else {
+      this.info(`Attempting to listening on (${port})`);
+      this._server = this._app.listen(parseInt(port, 10));
+    }
 
     // NOTE: The default node keep alive is 5 secs. This needs to be set
     // higher then any load balancers in front of this CNA
