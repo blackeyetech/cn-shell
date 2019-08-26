@@ -179,7 +179,7 @@ abstract class CNShell {
     let httpif = this.getCfg(CFG_HTTP_INTERFACE);
     let port = this.getCfg(CFG_HTTP_PORT, DEFAULT_HTTP_PORT);
 
-    if (http !== undefined) {
+    if (httpif !== undefined) {
       this.info(`Attempting to listening on (${httpif}:${port})`);
       this._server = this._app.listen(parseInt(port, 10), httpif);
     } else {
