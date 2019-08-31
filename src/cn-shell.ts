@@ -352,7 +352,7 @@ abstract class CNShell {
     });
   }
 
-  createRoute(path: string, cb: (body: object) => Promise<number>): void {
+  createRoute(path: string, cb: (body: object) => Promise<string>): void {
     path = `/${path.replace(/^\/+/, "").replace(/\/+$/, "")}`;
 
     this.info(`Adding create route on path ${path}`);
