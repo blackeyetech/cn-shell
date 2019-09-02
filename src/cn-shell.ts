@@ -360,9 +360,12 @@ abstract class CNShell {
     this._router.post(path, async (ctx, next) => {
       let id = await cb(ctx.request.body);
 
-      ctx.set("Location", `${ctx.origin}${ctx.url}/${id}`);
-      ctx.status = 201;
-
+      if (id.length) {
+        ctx.set("Location", `${ctx.origin}${ctx.url}/${id}`);
+        ctx.status = 201;
+      } else {
+        ctx.status = 200;
+      }
       await next();
     });
   }
