@@ -375,7 +375,7 @@ abstract class CNShell {
 
   readRoute(
     path: string,
-    cb: (query: string[], accepts: string, id?: string) => any,
+    cb: (query: { [key: string]: string }, accepts: string, id?: string) => any,
     id?: string,
   ): void {
     path = `/${path.replace(/^\/+/, "").replace(/\/+$/, "")}`;
@@ -433,7 +433,7 @@ abstract class CNShell {
 
   simpleReadRoute(
     path: string,
-    cb: (query: string[], id?: string) => any,
+    cb: (query: { [key: string]: string }, id?: string) => any,
     id?: string,
   ): void {
     path = `/${path.replace(/^\/+/, "").replace(/\/+$/, "")}`;
