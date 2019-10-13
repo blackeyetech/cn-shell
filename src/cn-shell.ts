@@ -367,15 +367,19 @@ abstract class CNShell {
     this.info(`Adding create route on path ${path}`);
 
     this._router.post(path, async (ctx, next) => {
+      let noException = true;
+
       let id = await cb(ctx.request.body).catch((e: HttpError) => {
         ctx.status = e.status;
         ctx.body = e.message;
         ctx.type = "application/json; charset=utf-8";
+
+        noException = false;
       });
 
-      // Check if there was an exception caught
-      if (id !== undefined) {
-        if (id.length) {
+      // Check if there was no exception caught
+      if (noException) {
+        if (typeof id === "string" && id.length) {
           ctx.set("Location", `${ctx.origin}${ctx.url}/${id}`);
           ctx.status = 201;
         } else {
@@ -390,9 +394,9 @@ abstract class CNShell {
   readRoute(
     path: string,
     cb: (
+      id: string,
       query: { [key: string]: string },
       accepts: string,
-      id?: string,
     ) => Promise<any>,
     id: boolean = true,
   ): void {
@@ -414,7 +418,7 @@ abstract class CNShell {
         return;
       }
 
-      data = await cb(ctx.query, accepts, id ? ctx.params.ID : undefined);
+      data = await cb(ctx.query, id ? ctx.params.ID : undefined, accepts);
 
       switch (accepts) {
         case HTTP_CONTENT_TYPE_XLSX:
@@ -459,16 +463,20 @@ abstract class CNShell {
     this.info(`Adding simple read route on path ${path}`);
 
     this._router.get(path, async (ctx, next) => {
+      let noException = true;
+
       let data = await cb(id ? ctx.params.ID : undefined, ctx.query).catch(
         (e: HttpError) => {
           ctx.status = e.status;
           ctx.body = e.message;
           ctx.type = "application/json; charset=utf-8";
+
+          noException = false;
         },
       );
 
-      // Check if there was an exception caught
-      if (data !== undefined) {
+      // Check if there was no exception caught
+      if (noException) {
         if (Array.isArray(data) && data.length > this._httpMaxSendRowsLimit) {
           ctx.set("Transfer-Encoding", "chunked");
           await this.sendChunkedArray(ctx, data);
@@ -497,18 +505,20 @@ abstract class CNShell {
     this.info(`Adding update route on path ${path}`);
 
     this._router.put(path, async (ctx, next) => {
-      ctx.status = 0;
+      let noException = true;
 
       await cb(ctx.request.body, id ? ctx.params.ID : undefined).catch(
         (e: HttpError) => {
           ctx.status = e.status;
           ctx.body = e.message;
           ctx.type = "application/json; charset=utf-8";
+
+          noException = false;
         },
       );
 
-      // Check if there was an exception caught
-      if (ctx.status === 0) {
+      // Check if there was no exception caught
+      if (noException) {
         ctx.status = 200;
       }
 
@@ -530,16 +540,18 @@ abstract class CNShell {
     this.info(`Adding delete route on path ${path}`);
 
     this._router.delete(path, async (ctx, next) => {
-      ctx.status = 0;
+      let noException = true;
 
       await cb(id ? ctx.params.ID : undefined).catch((e: HttpError) => {
         ctx.status = e.status;
         ctx.body = e.message;
         ctx.type = "application/json; charset=utf-8";
+
+        noException = false;
       });
 
-      // Check if there was an exception caught
-      if (ctx.status === 0) {
+      // Check if there was no exception caught
+      if (noException) {
         ctx.status = 200;
       }
 
