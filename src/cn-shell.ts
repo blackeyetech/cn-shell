@@ -372,7 +372,7 @@ abstract class CNShell {
       let id = await cb(ctx.request.body).catch((e: HttpError) => {
         ctx.status = e.status;
         ctx.body = e.message;
-        ctx.type = "application/text; charset=utf-8";
+        ctx.type = "text/plain; charset=utf-8";
 
         noException = false;
       });
@@ -469,7 +469,7 @@ abstract class CNShell {
         (e: HttpError) => {
           ctx.status = e.status;
           ctx.body = e.message;
-          ctx.type = "application/text; charset=utf-8";
+          ctx.type = "text/plain; charset=utf-8";
 
           noException = false;
         },
@@ -511,7 +511,7 @@ abstract class CNShell {
         (e: HttpError) => {
           ctx.status = e.status;
           ctx.body = e.message;
-          ctx.type = "application/text; charset=utf-8";
+          ctx.type = "text/plain; charset=utf-8";
 
           noException = false;
         },
@@ -545,7 +545,7 @@ abstract class CNShell {
       await cb(id ? ctx.params.ID : undefined).catch((e: HttpError) => {
         ctx.status = e.status;
         ctx.body = e.message;
-        ctx.type = "application/text; charset=utf-8";
+        ctx.type = "text/plain; charset=utf-8";
 
         noException = false;
       });
