@@ -315,7 +315,7 @@ abstract class CNShell {
     });
   }
 
-  async sendChunkedArray(ctx: Koa.Context, data: object[]) {
+  async sendChunkedArray(ctx: Koa.Context, data: { [key: string]: any }[]) {
     return new Promise(resolve => {
       let body = new Readable();
       body._read = function() {};
@@ -352,7 +352,10 @@ abstract class CNShell {
     });
   }
 
-  createRoute(path: string, cb: (body: object) => Promise<string>): void {
+  createRoute(
+    path: string,
+    cb: (body: { [key: string]: any }) => Promise<string>,
+  ): void {
     path = `/${path.replace(/^\/+/, "").replace(/\/+$/, "")}`;
 
     this.info(`Adding create route on path ${path}`);
