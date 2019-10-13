@@ -394,12 +394,12 @@ abstract class CNShell {
       accepts: string,
       id?: string,
     ) => Promise<any>,
-    id?: string,
+    id: boolean = true,
   ): void {
     path = `/${path.replace(/^\/+/, "").replace(/\/+$/, "")}`;
 
-    if (id !== undefined) {
-      path = `${path}/:${id}`;
+    if (id) {
+      path = `${path}/:ID`;
     }
 
     this.info(`Adding read route on path ${path}`);
@@ -414,11 +414,7 @@ abstract class CNShell {
         return;
       }
 
-      data = await cb(
-        ctx.query,
-        accepts,
-        id !== undefined ? ctx.params[id] : undefined,
-      );
+      data = await cb(ctx.query, accepts, id ? ctx.params.ID : undefined);
 
       switch (accepts) {
         case HTTP_CONTENT_TYPE_XLSX:
@@ -452,25 +448,24 @@ abstract class CNShell {
   simpleReadRoute(
     path: string,
     cb: (id?: string, query?: { [key: string]: string }) => Promise<any>,
-    id?: string,
+    id: boolean = true,
   ): void {
     path = `/${path.replace(/^\/+/, "").replace(/\/+$/, "")}`;
 
-    if (id !== undefined) {
-      path = `${path}/:${id}`;
+    if (id) {
+      path = `${path}/:ID`;
     }
 
     this.info(`Adding simple read route on path ${path}`);
 
     this._router.get(path, async (ctx, next) => {
-      let data = await cb(
-        ctx.query,
-        id !== undefined ? ctx.params[id] : undefined,
-      ).catch((e: HttpError) => {
-        ctx.status = e.status;
-        ctx.body = e.message;
-        ctx.type = "application/json; charset=utf-8";
-      });
+      let data = await cb(id ? ctx.params.ID : undefined, ctx.query).catch(
+        (e: HttpError) => {
+          ctx.status = e.status;
+          ctx.body = e.message;
+          ctx.type = "application/json; charset=utf-8";
+        },
+      );
 
       // Check if there was an exception caught
       if (data !== undefined) {
@@ -491,12 +486,12 @@ abstract class CNShell {
   updateRoute(
     path: string,
     cb: (body: any, id?: string) => Promise<void>,
-    id?: string,
+    id: boolean = true,
   ): void {
     path = `/${path.replace(/^\/+/, "").replace(/\/+$/, "")}`;
 
-    if (id !== undefined) {
-      path = `${path}/:${id}`;
+    if (id) {
+      path = `${path}/:ID`;
     }
 
     this.info(`Adding update route on path ${path}`);
@@ -504,14 +499,13 @@ abstract class CNShell {
     this._router.put(path, async (ctx, next) => {
       ctx.status = 0;
 
-      await cb(
-        ctx.request.body,
-        id !== undefined ? ctx.params[id] : undefined,
-      ).catch((e: HttpError) => {
-        ctx.status = e.status;
-        ctx.body = e.message;
-        ctx.type = "application/json; charset=utf-8";
-      });
+      await cb(ctx.request.body, id ? ctx.params.ID : undefined).catch(
+        (e: HttpError) => {
+          ctx.status = e.status;
+          ctx.body = e.message;
+          ctx.type = "application/json; charset=utf-8";
+        },
+      );
 
       // Check if there was an exception caught
       if (ctx.status === 0) {
@@ -525,12 +519,12 @@ abstract class CNShell {
   deleteRoute(
     path: string,
     cb: (id?: string) => Promise<void>,
-    id?: string,
+    id: boolean = true,
   ): void {
     path = `/${path.replace(/^\/+/, "").replace(/\/+$/, "")}`;
 
-    if (id !== undefined) {
-      path = `${path}/:${id}`;
+    if (id) {
+      path = `${path}/:ID`;
     }
 
     this.info(`Adding delete route on path ${path}`);
@@ -538,13 +532,11 @@ abstract class CNShell {
     this._router.delete(path, async (ctx, next) => {
       ctx.status = 0;
 
-      await cb(id !== undefined ? ctx.params[id] : undefined).catch(
-        (e: HttpError) => {
-          ctx.status = e.status;
-          ctx.body = e.message;
-          ctx.type = "application/json; charset=utf-8";
-        },
-      );
+      await cb(id ? ctx.params.ID : undefined).catch((e: HttpError) => {
+        ctx.status = e.status;
+        ctx.body = e.message;
+        ctx.type = "application/json; charset=utf-8";
+      });
 
       // Check if there was an exception caught
       if (ctx.status === 0) {
