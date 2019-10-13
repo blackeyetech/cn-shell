@@ -431,6 +431,38 @@ abstract class CNShell {
     });
   }
 
+  simpleReadRoute(
+    path: string,
+    cb: (query: string[], id?: string) => any,
+    id?: string,
+  ): void {
+    path = `/${path.replace(/^\/+/, "").replace(/\/+$/, "")}`;
+
+    if (id !== undefined) {
+      path = `${path}/:${id}`;
+    }
+
+    this.info(`Adding simple read route on path ${path}`);
+
+    this._router.get(path, async (ctx, next) => {
+      let data: any;
+
+      data = await cb(ctx.query, id !== undefined ? ctx.params[id] : undefined);
+
+      ctx.type = "application/json; charset=utf-8";
+
+      if (Array.isArray(data) && data.length > this._httpMaxSendRowsLimit) {
+        ctx.set("Transfer-Encoding", "chunked");
+        await this.sendChunkedArray(ctx, data);
+      } else {
+        ctx.status = 200;
+        ctx.body = JSON.stringify(data);
+      }
+
+      await next();
+    });
+  }
+
   updateRoute(
     path: string,
     cb: (body: any, id?: string) => void,
