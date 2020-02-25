@@ -49,6 +49,8 @@ export interface HttpError {
   message: string;
 }
 
+export { Context } from "koa";
+
 // CNShell class here
 abstract class CNShell {
   // Properties here
