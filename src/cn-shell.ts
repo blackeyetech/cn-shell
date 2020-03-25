@@ -66,6 +66,7 @@ abstract class CNShell {
   private _app: Koa;
   private _router: KoaRouter;
   private _server: http.Server;
+  private _serverLocal: http.Server;
 
   // Constructor here
   constructor(name: string, master?: CNShell) {
@@ -216,7 +217,7 @@ abstract class CNShell {
 
       if (this._listenLocal) {
         this.info(`Attempting to listen on (127.0.0.1:${port})`);
-        this._server = this._app.listen(parseInt(port, 10), "127.0.0.1");
+        this._serverLocal = this._app.listen(parseInt(port, 10), "127.0.0.1");
       }
     } else {
       this.info(`Attempting to listen on (${port})`);
@@ -241,9 +242,15 @@ abstract class CNShell {
     this.info("Exiting ...");
 
     if (this._server !== undefined) {
-      this.info("Closing HTTP port on server now ...");
+      this.info("Closing main HTTP port on server now ...");
       this._server.close();
       this.info("Port closed");
+
+      if (this._listenLocal) {
+        this.info("Closing local HTTP port on server now ...");
+        this._serverLocal.close();
+        this.info("Port closed");
+      }
     }
 
     this.info("Attempting to stop application ...");
