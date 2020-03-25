@@ -21,6 +21,7 @@ const CFG_LOG_LEVEL = "LOG_LEVEL";
 const CFG_HTTP_KEEP_ALIVE_TIMEOUT = "HTTP_KEEP_ALIVE_TIMEOUT";
 const CFG_HTTP_PORT = "HTTP_PORT";
 const CFG_HTTP_INTERFACE = "HTTP_INTERFACE";
+const CFG_HTTP_LISTEN_LOCAL = "HTTP_LISTEN_LOCAL";
 const CFG_HEALTHCHECK_PATH = "HEALTHCHECK_PATH";
 
 // Config defaults here
@@ -40,6 +41,7 @@ const ACCEPT_CONTENT_TYPES = [HTTP_CONTENT_TYPE_JSON, HTTP_CONTENT_TYPE_XLSX];
 
 // Misc consts here
 const version: string = require("../package.json").version;
+
 const NODE_ENV: string =
   process.env.NODE_ENV === undefined ? "development" : process.env.NODE_ENV;
 
@@ -54,25 +56,32 @@ export { Context } from "koa";
 // CNShell class here
 abstract class CNShell {
   // Properties here
+  private _master: CNShell | undefined;
   private readonly _name: string;
+  private readonly _version: string;
+  private _httpMaxSendRowsLimit: number;
   private _logger: CNLogger;
+  private _listenLocal: boolean;
+
   private _app: Koa;
   private _router: KoaRouter;
   private _server: http.Server;
-  private _httpMaxSendRowsLimit: number;
-
-  private readonly _version: string;
 
   // Constructor here
-  constructor(name: string) {
+  constructor(name: string, master?: CNShell) {
+    this._master = master;
+
     this._name = name;
-    this._app = new Koa();
-    this._router = new KoaRouter();
-    // this._app.use(koaHelmet());
-    this._app.use(koaBodyparser());
+    this._version = version;
     this._httpMaxSendRowsLimit = 1000;
 
-    this._version = version;
+    let listenLocal: string = this.getCfg(CFG_HTTP_LISTEN_LOCAL);
+
+    if (listenLocal === "Y") {
+      this._listenLocal = true;
+    } else {
+      this._listenLocal = false;
+    }
 
     let logger: string = this.getCfg(CFG_LOGGER, DEFAULT_LOGGER);
     switch (logger.toUpperCase()) {
@@ -85,30 +94,39 @@ abstract class CNShell {
         break;
     }
 
-    let logLevel: string = this.getCfg(CFG_LOG_LEVEL, DEFAULT_LOG_LEVEL);
+    if (master === undefined) {
+      this._app = new Koa();
+      this._router = new KoaRouter();
+      // this._app.use(koaHelmet());
+      this._app.use(koaBodyparser());
 
-    switch (logLevel.toUpperCase()) {
-      case "SILENT":
-        this._logger.level = CNLogger.CNLogLevel.LOG_COMPLETE_SILENCE;
-        break;
-      case "QUIET":
-        this._logger.level = CNLogger.CNLogLevel.LOG_QUIET;
-        break;
-      case "INFO":
-        this._logger.level = CNLogger.CNLogLevel.LOG_INFO;
-        break;
-      case "DEBUG":
-        this._logger.level = CNLogger.CNLogLevel.LOG_DEBUG;
-        break;
-      case "TRACE":
-        this._logger.level = CNLogger.CNLogLevel.LOG_TRACE;
-        break;
-      default:
-        this._logger.level = CNLogger.CNLogLevel.LOG_INFO;
-        this._logger.warn(
-          `LogLevel ${logLevel} is unknown. Setting level to INFO.`,
-        );
-        break;
+      let logLevel: string = this.getCfg(CFG_LOG_LEVEL, DEFAULT_LOG_LEVEL);
+
+      switch (logLevel.toUpperCase()) {
+        case "SILENT":
+          this._logger.level = CNLogger.CNLogLevel.LOG_COMPLETE_SILENCE;
+          break;
+        case "QUIET":
+          this._logger.level = CNLogger.CNLogLevel.LOG_QUIET;
+          break;
+        case "INFO":
+          this._logger.level = CNLogger.CNLogLevel.LOG_INFO;
+          break;
+        case "DEBUG":
+          this._logger.level = CNLogger.CNLogLevel.LOG_DEBUG;
+          break;
+        case "TRACE":
+          this._logger.level = CNLogger.CNLogLevel.LOG_TRACE;
+          break;
+        default:
+          this._logger.level = CNLogger.CNLogLevel.LOG_INFO;
+          this._logger.warn(
+            `LogLevel ${logLevel} is unknown. Setting level to INFO.`,
+          );
+          break;
+      }
+    } else {
+      this._router = master.router;
     }
   }
 
@@ -153,8 +171,13 @@ abstract class CNShell {
 
   // Public methods here
   async init(testing?: boolean) {
+    if (this._master !== undefined) {
+      this.info("We are not the master - so we will not initialise!");
+      return;
+    }
+
     this.info("Initialising ...");
-    this.info(`Version (${this._version})`);
+    this.info(`CN-Shell Version (${this._version})`);
     this.info(`NODE_ENV (${NODE_ENV})`);
 
     this.info("Setting up event handler for SIGINT and SIGTERM");
@@ -188,10 +211,15 @@ abstract class CNShell {
     let port = this.getCfg(CFG_HTTP_PORT, DEFAULT_HTTP_PORT);
 
     if (httpif !== undefined) {
-      this.info(`Attempting to listening on (${httpif}:${port})`);
+      this.info(`Attempting to listen on (${httpif}:${port})`);
       this._server = this._app.listen(parseInt(port, 10), httpif);
+
+      if (this._listenLocal) {
+        this.info(`Attempting to listen on (127.0.0.1:${port})`);
+        this._server = this._app.listen(parseInt(port, 10), "127.0.0.1");
+      }
     } else {
-      this.info(`Attempting to listening on (${port})`);
+      this.info(`Attempting to listen on (${port})`);
       this._server = this._app.listen(parseInt(port, 10));
     }
 
