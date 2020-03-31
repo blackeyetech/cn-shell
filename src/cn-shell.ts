@@ -460,12 +460,17 @@ abstract class CNShell {
   createRoute(
     path: string,
     cb: (body: { [key: string]: any }) => Promise<string>,
+    pattern?: HttpPropsPattern,
   ): void {
     path = `/${path.replace(/^\/+/, "").replace(/\/+$/, "")}`;
 
     this.info(`Adding create route on path ${path}`);
 
     this._router.post(path, async (ctx, next) => {
+      if (pattern !== undefined) {
+        this.checkProps(ctx.request.body, pattern);
+      }
+
       let noException = true;
 
       let id = await cb(ctx.request.body).catch((e: HttpError) => {
@@ -594,6 +599,7 @@ abstract class CNShell {
     path: string,
     cb: (body: any, id?: string) => Promise<void>,
     id: boolean = true,
+    pattern: HttpPropsPattern,
   ): void {
     path = `/${path.replace(/^\/+/, "").replace(/\/+$/, "")}`;
 
@@ -604,6 +610,10 @@ abstract class CNShell {
     this.info(`Adding update route on path ${path}`);
 
     this._router.put(path, async (ctx, next) => {
+      if (pattern !== undefined) {
+        this.checkProps(ctx.request.body, pattern);
+      }
+
       let noException = true;
 
       await cb(ctx.request.body, id ? ctx.params.ID : undefined).catch(
