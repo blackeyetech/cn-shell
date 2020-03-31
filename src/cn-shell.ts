@@ -493,27 +493,38 @@ abstract class CNShell {
     this.info(`Adding create route on path ${path}`);
 
     this._router.post(path, async (ctx, next) => {
+      let noException = true;
+      let props: { [key: string]: any } = ctx.request.body;
+
       if (pattern !== undefined) {
-        this.checkProps(ctx.request.body, pattern);
+        try {
+          props = this.checkProps(ctx.request.body, pattern);
+        } catch (e) {
+          ctx.status = e.status;
+          ctx.body = e.message;
+          ctx.type = "text/plain; charset=utf-8";
+
+          noException = false;
+        }
       }
 
-      let noException = true;
-
-      let id = await cb(ctx.request.body).catch((e: HttpError) => {
-        ctx.status = e.status;
-        ctx.body = e.message;
-        ctx.type = "text/plain; charset=utf-8";
-
-        noException = false;
-      });
-
-      // Check if there was no exception caught
       if (noException) {
-        if (typeof id === "string" && id.length) {
-          ctx.set("Location", `${ctx.origin}${ctx.url}/${id}`);
-          ctx.status = 201;
-        } else {
-          ctx.status = 200;
+        let id = await cb(props).catch((e: HttpError) => {
+          ctx.status = e.status;
+          ctx.body = e.message;
+          ctx.type = "text/plain; charset=utf-8";
+
+          noException = false;
+        });
+
+        // Check if there was no exception caught
+        if (noException) {
+          if (typeof id === "string" && id.length) {
+            ctx.set("Location", `${ctx.origin}${ctx.url}/${id}`);
+            ctx.status = 201;
+          } else {
+            ctx.status = 200;
+          }
         }
       }
 
@@ -636,21 +647,32 @@ abstract class CNShell {
     this.info(`Adding update route on path ${path}`);
 
     this._router.put(path, async (ctx, next) => {
-      if (pattern !== undefined) {
-        this.checkProps(ctx.request.body, pattern);
-      }
-
       let noException = true;
+      let props = ctx.request.body;
 
-      await cb(ctx.request.body, id ? ctx.params.ID : undefined).catch(
-        (e: HttpError) => {
+      if (pattern !== undefined) {
+        try {
+          props = this.checkProps(ctx.request.body, pattern);
+        } catch (e) {
           ctx.status = e.status;
           ctx.body = e.message;
           ctx.type = "text/plain; charset=utf-8";
 
           noException = false;
-        },
-      );
+        }
+      }
+
+      if (noException) {
+        await cb(props, id ? ctx.params.ID : undefined).catch(
+          (e: HttpError) => {
+            ctx.status = e.status;
+            ctx.body = e.message;
+            ctx.type = "text/plain; charset=utf-8";
+
+            noException = false;
+          },
+        );
+      }
 
       // Check if there was no exception caught
       if (noException) {
