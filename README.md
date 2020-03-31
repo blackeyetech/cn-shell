@@ -18,10 +18,12 @@ cn-shell is a JS wrapper, like a shell, for cloud native applications.
 
 - HTTP_KEEP_ALIVE_TIMEOUT: Use to spcify the HTTP keep alive timeout value in ms
 
-- CNA_HTTP_INTERFACE: Used to specify the interface to listen on. Default is "eth0"
+- CNA_HTTP_INTERFACE: Used to specify the interface to listen on. Default is "0.0.0.0"
 
 - CNA_HTTP_PORT: Used to specify the port to listen on. Default is "80"
 
 - CNA_HEALTHCHECK_PATH: Used to specify the path to use for the healcheck endpoint. Default is "/healthcheck"
+
+- CNA_HTTP_LISTEN_LOCAL: Used to listen on localhost for HTTP requests
 
 _**Documentation will be along shortly!**_

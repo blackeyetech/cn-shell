@@ -51,6 +51,14 @@ export interface HttpError {
   message: string;
 }
 
+export interface HttpPropsPattern {
+  [key: string]: {
+    required: boolean;
+    default?: any;
+    allowed?: any;
+  };
+}
+
 export { Context } from "koa";
 
 // CNShell class here
@@ -316,7 +324,61 @@ abstract class CNShell {
     this._logger.force(...args);
   }
 
-  // http koa help methods here
+  // http help methods here
+  checkProps(data: { [key: string]: any }, pattern: HttpPropsPattern): any {
+    let found: { [key: string]: any } = {};
+
+    for (let prop of Object.entries(pattern)) {
+      let name = prop[0];
+      let value = data[name] === undefined ? pattern[name].default : data[name];
+
+      if ((value === undefined || value === "") && pattern[name].required) {
+        let error: HttpError = {
+          status: 400,
+          message: `Missing required field '${name}'`,
+        };
+
+        throw error;
+      }
+
+      if (pattern[name].allowed !== undefined) {
+        if (Array.isArray(pattern[name].allowed)) {
+          if (!pattern[name].allowed.includes(value)) {
+            let msg = `'${name}' value '${value}' is not valid. `;
+            msg += `Allowed values are [${pattern[name].allowed}]`;
+
+            let error: HttpError = {
+              status: 400,
+              message: msg,
+            };
+
+            throw error;
+          }
+        } else {
+          if (value !== pattern[name].allowed) {
+            let msg = `'${name}' value '${value}' is not valid. `;
+            msg += `Allowed value is '${pattern[name].allowed}'`;
+
+            let error: HttpError = {
+              status: 400,
+              message: msg,
+            };
+
+            throw error;
+          }
+        }
+      }
+
+      if (value !== undefined) {
+        found[name] = value;
+      }
+    }
+
+    this.debug("found: %j", found);
+
+    return found;
+  }
+
   staticResponseRoute(path: string, response: string): void {
     path = `/${path.replace(/^\/+/, "").replace(/\/+$/, "")}`;
 

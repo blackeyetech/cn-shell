@@ -1,4 +1,4 @@
-import CNShell from "./cn-shell";
+import CNShell, { HttpPropsPattern } from "./cn-shell";
 
 class App1 extends CNShell {
   constructor(name: string) {
@@ -248,6 +248,27 @@ async function runTests() {
   await app3.init(true);
 
   let app4 = new App4("FailureToStartTest");
+
+  let props: HttpPropsPattern = {
+    first: {
+      required: true,
+    },
+    second: {
+      required: true,
+      allowed: ["X", "Y", "Z"],
+    },
+    third: {
+      required: true,
+      default: "A",
+    },
+  };
+  try {
+    let found = app4.checkProps({ first: 1, second: "Z" }, props);
+    console.log("%j", found);
+  } catch (e) {
+    console.error("%j", e);
+  }
+
   await app4.init();
 }
 
