@@ -251,19 +251,35 @@ async function runTests() {
 
   let props: HttpPropsPattern = {
     first: {
+      type: "string",
       required: true,
     },
     second: {
+      type: "string",
       required: true,
       allowed: ["X", "Y", "Z"],
     },
     third: {
+      type: "string",
       required: true,
       default: "A",
     },
+    fourth: {
+      type: "object",
+      required: true,
+      pattern: {
+        inner: {
+          type: "string",
+          required: true,
+        },
+      },
+    },
   };
   try {
-    let found = app4.checkProps({ first: 1, second: "Z" }, props);
+    let found = app4.checkProps(
+      { first: "1", second: "Z", fourth: { inner: "1" } },
+      props,
+    );
     console.log("%j", found);
   } catch (e) {
     console.error("%j", e);

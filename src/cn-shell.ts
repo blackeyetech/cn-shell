@@ -54,8 +54,10 @@ export interface HttpError {
 export interface HttpPropsPattern {
   [key: string]: {
     required: boolean;
+    type: string;
     default?: any;
     allowed?: any;
+    pattern?: HttpPropsPattern; // If the type is an "object"
   };
 }
 
@@ -341,7 +343,21 @@ abstract class CNShell {
         throw error;
       }
 
-      if (pattern[name].allowed !== undefined) {
+      if (typeof value !== pattern[name].type) {
+        let error: HttpError = {
+          status: 400,
+          message: `Type of '${name}' is ${typeof value} and it should be ${
+            pattern[name].type
+          }`,
+        };
+
+        throw error;
+      }
+
+      if (
+        pattern[name].type !== "object" &&
+        pattern[name].allowed !== undefined
+      ) {
         if (Array.isArray(pattern[name].allowed)) {
           if (!pattern[name].allowed.includes(value)) {
             let msg = `'${name}' value '${value}' is not valid. `;
@@ -370,7 +386,17 @@ abstract class CNShell {
       }
 
       if (value !== undefined) {
-        found[name] = value;
+        if (
+          pattern[name].type === "object" &&
+          pattern[name].pattern !== undefined
+        ) {
+          found[name] = this.checkProps(
+            value,
+            <HttpPropsPattern>pattern[name].pattern,
+          );
+        } else {
+          found[name] = value;
+        }
       }
     }
 
