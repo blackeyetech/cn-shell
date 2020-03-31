@@ -343,6 +343,10 @@ abstract class CNShell {
         throw error;
       }
 
+      if (value === undefined) {
+        continue;
+      }
+
       if (typeof value !== pattern[name].type) {
         let error: HttpError = {
           status: 400,
@@ -385,18 +389,17 @@ abstract class CNShell {
         }
       }
 
-      if (value !== undefined) {
-        if (
-          pattern[name].type === "object" &&
-          pattern[name].pattern !== undefined
-        ) {
+      if (pattern[name].type === "object") {
+        if (pattern[name].pattern === undefined) {
+          found[name] = value;
+        } else {
           found[name] = this.checkProps(
             value,
             <HttpPropsPattern>pattern[name].pattern,
           );
-        } else {
-          found[name] = value;
         }
+      } else {
+        found[name] = value;
       }
     }
 
