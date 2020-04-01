@@ -347,7 +347,12 @@ abstract class CNShell {
         continue;
       }
 
-      if (typeof value !== pattern[name].type) {
+      // A typeof array === "object" so we have to use Array.isArray()
+      if (
+        (pattern[name].type !== "array" &&
+          typeof value !== pattern[name].type) ||
+        (pattern[name].type === "array" && Array.isArray(value) !== true)
+      ) {
         let error: HttpError = {
           status: 400,
           message: `Type of '${name}' is ${typeof value} and it should be ${
@@ -358,8 +363,19 @@ abstract class CNShell {
         throw error;
       }
 
+      // Check if an object has a value of array which will return a typeof object
+      if (pattern[name].type === "object" && Array.isArray(value) === true) {
+        let error: HttpError = {
+          status: 400,
+          message: `Type of '${name}' is array and it should be object`,
+        };
+
+        throw error;
+      }
+
       if (
         pattern[name].type !== "object" &&
+        pattern[name].type !== "array" &&
         pattern[name].allowed !== undefined
       ) {
         if (Array.isArray(pattern[name].allowed)) {
@@ -391,12 +407,32 @@ abstract class CNShell {
 
       if (pattern[name].type === "object") {
         if (pattern[name].pattern === undefined) {
+          // No pattern mean no check so just copy the value as is
           found[name] = value;
         } else {
+          // If the value is an object then apply it's pattern now
           found[name] = this.checkProps(
             value,
             <HttpPropsPattern>pattern[name].pattern,
           );
+        }
+      } else if (pattern[name].type === "array") {
+        if (pattern[name].pattern === undefined) {
+          // No pattern mean no check so just copy the value as is
+          found[name] = value;
+        } else {
+          // We have to iterate through each value
+          found[name] = [];
+
+          for (let i = 0; i < value.length; i++) {
+            found[name].push(
+              this.checkProps(
+                value[i],
+                // Apply same pattern to all values in array
+                <HttpPropsPattern>pattern[name].pattern,
+              ),
+            );
+          }
         }
       } else {
         found[name] = value;

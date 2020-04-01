@@ -277,7 +277,7 @@ async function runTests() {
   };
   try {
     let found = app4.checkProps(
-      { first: "1", second: "Z", fourth: { inner: "1" } },
+      { first: "1", second: "Z", fourth: [{ inner: "1" }, { inner: "2" }] },
       props,
     );
     console.log("%j", found);
