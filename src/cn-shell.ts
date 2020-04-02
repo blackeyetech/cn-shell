@@ -105,37 +105,37 @@ abstract class CNShell {
         break;
     }
 
+    let logLevel: string = this.getCfg(CFG_LOG_LEVEL, DEFAULT_LOG_LEVEL);
+
+    switch (logLevel.toUpperCase()) {
+      case "SILENT":
+        this._logger.level = CNLogger.CNLogLevel.LOG_COMPLETE_SILENCE;
+        break;
+      case "QUIET":
+        this._logger.level = CNLogger.CNLogLevel.LOG_QUIET;
+        break;
+      case "INFO":
+        this._logger.level = CNLogger.CNLogLevel.LOG_INFO;
+        break;
+      case "DEBUG":
+        this._logger.level = CNLogger.CNLogLevel.LOG_DEBUG;
+        break;
+      case "TRACE":
+        this._logger.level = CNLogger.CNLogLevel.LOG_TRACE;
+        break;
+      default:
+        this._logger.level = CNLogger.CNLogLevel.LOG_INFO;
+        this._logger.warn(
+          `LogLevel ${logLevel} is unknown. Setting level to INFO.`,
+        );
+        break;
+    }
+
     if (master === undefined) {
       this._app = new Koa();
       this._router = new KoaRouter();
       // this._app.use(koaHelmet());
       this._app.use(koaBodyparser());
-
-      let logLevel: string = this.getCfg(CFG_LOG_LEVEL, DEFAULT_LOG_LEVEL);
-
-      switch (logLevel.toUpperCase()) {
-        case "SILENT":
-          this._logger.level = CNLogger.CNLogLevel.LOG_COMPLETE_SILENCE;
-          break;
-        case "QUIET":
-          this._logger.level = CNLogger.CNLogLevel.LOG_QUIET;
-          break;
-        case "INFO":
-          this._logger.level = CNLogger.CNLogLevel.LOG_INFO;
-          break;
-        case "DEBUG":
-          this._logger.level = CNLogger.CNLogLevel.LOG_DEBUG;
-          break;
-        case "TRACE":
-          this._logger.level = CNLogger.CNLogLevel.LOG_TRACE;
-          break;
-        default:
-          this._logger.level = CNLogger.CNLogLevel.LOG_INFO;
-          this._logger.warn(
-            `LogLevel ${logLevel} is unknown. Setting level to INFO.`,
-          );
-          break;
-      }
     } else {
       this._router = master.router;
     }
