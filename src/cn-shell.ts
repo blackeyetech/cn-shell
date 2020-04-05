@@ -182,11 +182,6 @@ abstract class CNShell {
 
   // Public methods here
   async init(testing?: boolean) {
-    if (this._master !== undefined) {
-      this.info("We are not the master - so we will not initialise!");
-      return;
-    }
-
     this.info("Initialising ...");
     this.info(`CN-Shell Version (${this._version})`);
     this.info(`NODE_ENV (${NODE_ENV})`);
@@ -194,8 +189,6 @@ abstract class CNShell {
     this.info("Setting up event handler for SIGINT and SIGTERM");
     process.on("SIGINT", async () => await this.exit());
     process.on("SIGTERM", async () => await this.exit());
-
-    this.addHealthCheckEndpoint();
 
     this.info("Attempting to start application ...");
     let started = await this.start().catch(e => {
@@ -214,36 +207,42 @@ abstract class CNShell {
       await this.exit();
     }
 
-    this.info("Initialising HTTP interface ...");
-
-    this._app.use(this._router.routes());
-
-    let httpif = this.getCfg(CFG_HTTP_INTERFACE);
-    let port = this.getCfg(CFG_HTTP_PORT, DEFAULT_HTTP_PORT);
-
-    if (httpif !== undefined) {
-      this.info(`Attempting to listen on (${httpif}:${port})`);
-      this._server = this._app.listen(parseInt(port, 10), httpif);
-
-      if (this._listenLocal) {
-        this.info(`Attempting to listen on (127.0.0.1:${port})`);
-        this._serverLocal = this._app.listen(parseInt(port, 10), "127.0.0.1");
-      }
+    if (this._master !== undefined) {
+      this.info("We are not the master. Not initialising the HTTP interface!");
     } else {
-      this.info(`Attempting to listen on (${port})`);
-      this._server = this._app.listen(parseInt(port, 10));
+      this.addHealthCheckEndpoint();
+
+      this.info("Initialising HTTP interface ...");
+
+      this._app.use(this._router.routes());
+
+      let httpif = this.getCfg(CFG_HTTP_INTERFACE);
+      let port = this.getCfg(CFG_HTTP_PORT, DEFAULT_HTTP_PORT);
+
+      if (httpif !== undefined) {
+        this.info(`Attempting to listen on (${httpif}:${port})`);
+        this._server = this._app.listen(parseInt(port, 10), httpif);
+
+        if (this._listenLocal) {
+          this.info(`Attempting to listen on (127.0.0.1:${port})`);
+          this._serverLocal = this._app.listen(parseInt(port, 10), "127.0.0.1");
+        }
+      } else {
+        this.info(`Attempting to listen on (${port})`);
+        this._server = this._app.listen(parseInt(port, 10));
+      }
+
+      // NOTE: The default node keep alive is 5 secs. This needs to be set
+      // higher then any load balancers in front of this CNA
+      let keepAlive = this.getCfg(
+        CFG_HTTP_KEEP_ALIVE_TIMEOUT,
+        DEFAULT_HTTP_KEEP_ALIVE_TIMEOUT,
+      );
+
+      this._server.keepAliveTimeout = parseInt(keepAlive, 10);
+
+      this.info("Now listening!");
     }
-
-    // NOTE: The default node keep alive is 5 secs. This needs to be set
-    // higher then any load balancers in front of this CNA
-    let keepAlive = this.getCfg(
-      CFG_HTTP_KEEP_ALIVE_TIMEOUT,
-      DEFAULT_HTTP_KEEP_ALIVE_TIMEOUT,
-    );
-
-    this._server.keepAliveTimeout = parseInt(keepAlive, 10);
-
-    this.info("Now listening!");
 
     this.info("Ready to Rock and Roll baby!");
   }
