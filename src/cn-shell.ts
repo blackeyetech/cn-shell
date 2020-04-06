@@ -3,7 +3,7 @@ import CNLogger from "./cn-logger";
 import CNLoggerConsole from "./cn-logger-console";
 
 import Koa from "koa";
-import KoaRouter from "koa-router";
+import KoaRouter, { IRouterParamContext } from "koa-router";
 
 // import koaHelmet from "koa-helmet";
 import koaBodyparser from "koa-bodyparser";
@@ -523,7 +523,10 @@ abstract class CNShell {
 
   createRoute(
     path: string,
-    cb: (body: { [key: string]: any }) => Promise<string>,
+    cb: (
+      body: { [key: string]: any },
+      params?: IRouterParamContext,
+    ) => Promise<string>,
     pattern?: HttpPropsPattern,
   ): void {
     path = `/${path.replace(/^\/+/, "").replace(/\/+$/, "")}`;
@@ -547,7 +550,7 @@ abstract class CNShell {
       }
 
       if (noException) {
-        let id = await cb(props).catch((e: HttpError) => {
+        let id = await cb(props, ctx.params).catch((e: HttpError) => {
           ctx.status = e.status;
           ctx.body = e.message;
           ctx.type = "text/plain; charset=utf-8";
@@ -576,6 +579,7 @@ abstract class CNShell {
       id: string,
       query: { [key: string]: string },
       accepts: string,
+      params?: IRouterParamContext,
     ) => Promise<any>,
     id: boolean = true,
   ): void {
@@ -597,7 +601,12 @@ abstract class CNShell {
         return;
       }
 
-      data = await cb(ctx.query, id ? ctx.params.ID : undefined, accepts);
+      data = await cb(
+        ctx.query,
+        id ? ctx.params.ID : undefined,
+        accepts,
+        ctx.params,
+      );
 
       switch (accepts) {
         case HTTP_CONTENT_TYPE_XLSX:
@@ -630,7 +639,11 @@ abstract class CNShell {
 
   simpleReadRoute(
     path: string,
-    cb: (id?: string, query?: { [key: string]: string }) => Promise<any>,
+    cb: (
+      id?: string,
+      query?: { [key: string]: string },
+      params?: IRouterParamContext,
+    ) => Promise<any>,
     id: boolean = true,
   ): void {
     path = `/${path.replace(/^\/+/, "").replace(/\/+$/, "")}`;
@@ -644,15 +657,17 @@ abstract class CNShell {
     this._router.get(path, async (ctx, next) => {
       let noException = true;
 
-      let data = await cb(id ? ctx.params.ID : undefined, ctx.query).catch(
-        (e: HttpError) => {
-          ctx.status = e.status;
-          ctx.body = e.message;
-          ctx.type = "text/plain; charset=utf-8";
+      let data = await cb(
+        id ? ctx.params.ID : undefined,
+        ctx.query,
+        ctx.params,
+      ).catch((e: HttpError) => {
+        ctx.status = e.status;
+        ctx.body = e.message;
+        ctx.type = "text/plain; charset=utf-8";
 
-          noException = false;
-        },
-      );
+        noException = false;
+      });
 
       // Check if there was no exception caught
       if (noException) {
@@ -672,7 +687,7 @@ abstract class CNShell {
 
   updateRoute(
     path: string,
-    cb: (body: any, id?: string) => Promise<void>,
+    cb: (body: any, id?: string, params?: IRouterParamContext) => Promise<void>,
     id: boolean = true,
     pattern: HttpPropsPattern,
   ): void {
@@ -701,7 +716,7 @@ abstract class CNShell {
       }
 
       if (noException) {
-        await cb(props, id ? ctx.params.ID : undefined).catch(
+        await cb(props, id ? ctx.params.ID : undefined, ctx.params).catch(
           (e: HttpError) => {
             ctx.status = e.status;
             ctx.body = e.message;
@@ -723,7 +738,7 @@ abstract class CNShell {
 
   deleteRoute(
     path: string,
-    cb: (id?: string) => Promise<void>,
+    cb: (id?: string, params?: IRouterParamContext) => Promise<void>,
     id: boolean = true,
   ): void {
     path = `/${path.replace(/^\/+/, "").replace(/\/+$/, "")}`;
@@ -737,13 +752,15 @@ abstract class CNShell {
     this._router.delete(path, async (ctx, next) => {
       let noException = true;
 
-      await cb(id ? ctx.params.ID : undefined).catch((e: HttpError) => {
-        ctx.status = e.status;
-        ctx.body = e.message;
-        ctx.type = "text/plain; charset=utf-8";
+      await cb(id ? ctx.params.ID : undefined, ctx.params).catch(
+        (e: HttpError) => {
+          ctx.status = e.status;
+          ctx.body = e.message;
+          ctx.type = "text/plain; charset=utf-8";
 
-        noException = false;
-      });
+          noException = false;
+        },
+      );
 
       // Check if there was no exception caught
       if (noException) {
