@@ -208,7 +208,7 @@ abstract class CNShell {
     }
 
     if (this._master !== undefined) {
-      this.info("We are not the master. Not initialising the HTTP interface!");
+      this.info("We are ready - waiting for master to do his thang!");
     } else {
       this.addHealthCheckEndpoint();
 
@@ -242,9 +242,9 @@ abstract class CNShell {
       this._server.keepAliveTimeout = parseInt(keepAlive, 10);
 
       this.info("Now listening!");
-    }
 
-    this.info("Ready to Rock and Roll baby!");
+      this.info("Ready to Rock and Roll baby!");
+    }
   }
 
   async exit(hard: boolean = true): Promise<void> {
