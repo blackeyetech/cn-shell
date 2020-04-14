@@ -689,7 +689,7 @@ abstract class CNShell {
     path: string,
     cb: (body: any, id?: string, params?: IRouterParamContext) => Promise<void>,
     id: boolean = true,
-    pattern: HttpPropsPattern,
+    pattern?: HttpPropsPattern,
   ): void {
     path = `/${path.replace(/^\/+/, "").replace(/\/+$/, "")}`;
 
