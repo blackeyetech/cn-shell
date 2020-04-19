@@ -87,16 +87,6 @@ abstract class CNShell {
     this._name = name;
     this._version = version;
 
-    let disabled = this.getCfg(
-      `${CFG_DISABLED}_${name.replace(/(- \.)/, "").toUpperCase()}`,
-    );
-
-    if (disabled === "Y") {
-      this._disabled = true;
-    } else {
-      this._disabled = false;
-    }
-
     let logger: string = this.getCfg(CFG_LOGGER, DEFAULT_LOGGER);
     switch (logger.toUpperCase()) {
       case "CONSOLE":
@@ -136,6 +126,16 @@ abstract class CNShell {
           `LogLevel ${logLevel} is unknown. Setting level to INFO.`,
         );
         break;
+    }
+
+    let disabled = this.getCfg(
+      `${CFG_DISABLED}_${name.replace(/-| |\./, "").toUpperCase()}`,
+    );
+
+    if (disabled === "Y") {
+      this._disabled = true;
+    } else {
+      this._disabled = false;
     }
 
     if (this._disabled) {
@@ -301,7 +301,12 @@ abstract class CNShell {
   }
 
   getCfg(config: string, defaultVal: string = ""): string {
-    let value = process.env[`CNA_${config.toUpperCase()}`];
+    let evar = `CNA_${config.toUpperCase()}`;
+    let value = process.env[evar];
+
+    if (this._logger !== undefined) {
+      this.info("Config (%s) = (%s)", evar, value);
+    }
 
     // If env var doesn't exist then return the default value
     if (value === undefined) {
@@ -312,7 +317,12 @@ abstract class CNShell {
   }
 
   getRequiredCfg(config: string): string {
-    let value = process.env[`CNA_${config.toUpperCase()}`];
+    let evar = `CNA_${config.toUpperCase()}`;
+    let value = process.env[evar];
+
+    if (this._logger !== undefined) {
+      this.info("Config (%s) = (%s)", evar, value);
+    }
 
     if (value === undefined) {
       throw Error(
