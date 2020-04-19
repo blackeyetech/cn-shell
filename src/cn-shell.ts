@@ -15,6 +15,7 @@ import { Readable } from "stream";
 import * as http from "http";
 
 // Config consts here
+const CFG_DISABLED = "DISABLED";
 const CFG_LOGGER = "LOGGER";
 const CFG_LOG_LEVEL = "LOG_LEVEL";
 
@@ -66,6 +67,8 @@ export { Context } from "koa";
 // CNShell class here
 abstract class CNShell {
   // Properties here
+  protected readonly _disabled: boolean;
+
   private _master: CNShell | undefined;
   private readonly _name: string;
   private readonly _version: string;
@@ -81,17 +84,17 @@ abstract class CNShell {
   // Constructor here
   constructor(name: string, master?: CNShell) {
     this._master = master;
-
     this._name = name;
     this._version = version;
-    this._httpMaxSendRowsLimit = 1000;
 
-    let listenLocal: string = this.getCfg(CFG_HTTP_LISTEN_LOCAL);
+    let disabled = this.getCfg(
+      `${CFG_DISABLED}_${name.replace(/(- \.)/, "").toUpperCase()}`,
+    );
 
-    if (listenLocal === "Y") {
-      this._listenLocal = true;
+    if (disabled === "Y") {
+      this._disabled = true;
     } else {
-      this._listenLocal = false;
+      this._disabled = false;
     }
 
     let logger: string = this.getCfg(CFG_LOGGER, DEFAULT_LOGGER);
@@ -112,6 +115,10 @@ abstract class CNShell {
         this._logger.level = CNLogger.CNLogLevel.LOG_COMPLETE_SILENCE;
         break;
       case "QUIET":
+        this._master = master;
+        this._name = name;
+        this._version = version;
+
         this._logger.level = CNLogger.CNLogLevel.LOG_QUIET;
         break;
       case "INFO":
@@ -129,6 +136,20 @@ abstract class CNShell {
           `LogLevel ${logLevel} is unknown. Setting level to INFO.`,
         );
         break;
+    }
+
+    if (this._disabled) {
+      return;
+    }
+
+    this._httpMaxSendRowsLimit = 1000;
+
+    let listenLocal: string = this.getCfg(CFG_HTTP_LISTEN_LOCAL);
+
+    if (listenLocal === "Y") {
+      this._listenLocal = true;
+    } else {
+      this._listenLocal = false;
     }
 
     if (master === undefined) {
@@ -182,6 +203,11 @@ abstract class CNShell {
 
   // Public methods here
   async init(testing?: boolean) {
+    if (this._disabled) {
+      this.info("This extension had been disabled!");
+      return;
+    }
+
     this.info("Initialising ...");
     this.info(`CN-Shell Version (${this._version})`);
     this.info(`NODE_ENV (${NODE_ENV})`);
