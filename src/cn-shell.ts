@@ -562,6 +562,7 @@ abstract class CNShell {
     cb: (
       body: { [key: string]: any },
       params?: IRouterParamContext,
+      headers?: any,
     ) => Promise<string>,
     pattern?: HttpPropsPattern,
   ): void {
@@ -586,13 +587,15 @@ abstract class CNShell {
       }
 
       if (noException) {
-        let id = await cb(props, ctx.params).catch((e: HttpError) => {
-          ctx.status = e.status;
-          ctx.body = e.message;
-          ctx.type = "text/plain; charset=utf-8";
+        let id = await cb(props, ctx.params, ctx.headers).catch(
+          (e: HttpError) => {
+            ctx.status = e.status;
+            ctx.body = e.message;
+            ctx.type = "text/plain; charset=utf-8";
 
-          noException = false;
-        });
+            noException = false;
+          },
+        );
 
         // Check if there was no exception caught
         if (noException) {
@@ -616,6 +619,7 @@ abstract class CNShell {
       query: { [key: string]: string },
       accepts: string,
       params?: IRouterParamContext,
+      headers?: any,
     ) => Promise<any>,
     id: boolean = true,
   ): void {
@@ -642,6 +646,7 @@ abstract class CNShell {
         id ? ctx.params.ID : undefined,
         accepts,
         ctx.params,
+        ctx.headers,
       );
 
       switch (accepts) {
@@ -679,6 +684,7 @@ abstract class CNShell {
       id?: string,
       query?: { [key: string]: string },
       params?: IRouterParamContext,
+      headers?: any,
     ) => Promise<any>,
     id: boolean = true,
   ): void {
@@ -697,6 +703,7 @@ abstract class CNShell {
         id ? ctx.params.ID : undefined,
         ctx.query,
         ctx.params,
+        ctx.headers,
       ).catch((e: HttpError) => {
         ctx.status = e.status;
         ctx.body = e.message;
@@ -723,7 +730,12 @@ abstract class CNShell {
 
   updateRoute(
     path: string,
-    cb: (body: any, id?: string, params?: IRouterParamContext) => Promise<void>,
+    cb: (
+      body: any,
+      id?: string,
+      params?: IRouterParamContext,
+      headers?: any,
+    ) => Promise<void>,
     id: boolean = true,
     pattern?: HttpPropsPattern,
   ): void {
@@ -752,15 +764,18 @@ abstract class CNShell {
       }
 
       if (noException) {
-        await cb(props, id ? ctx.params.ID : undefined, ctx.params).catch(
-          (e: HttpError) => {
-            ctx.status = e.status;
-            ctx.body = e.message;
-            ctx.type = "text/plain; charset=utf-8";
+        await cb(
+          props,
+          id ? ctx.params.ID : undefined,
+          ctx.params,
+          ctx.headers,
+        ).catch((e: HttpError) => {
+          ctx.status = e.status;
+          ctx.body = e.message;
+          ctx.type = "text/plain; charset=utf-8";
 
-            noException = false;
-          },
-        );
+          noException = false;
+        });
       }
 
       // Check if there was no exception caught
@@ -774,7 +789,11 @@ abstract class CNShell {
 
   deleteRoute(
     path: string,
-    cb: (id?: string, params?: IRouterParamContext) => Promise<void>,
+    cb: (
+      id?: string,
+      params?: IRouterParamContext,
+      headers?: any,
+    ) => Promise<void>,
     id: boolean = true,
   ): void {
     path = `/${path.replace(/^\/+/, "").replace(/\/+$/, "")}`;
@@ -788,7 +807,7 @@ abstract class CNShell {
     this._router.delete(path, async (ctx, next) => {
       let noException = true;
 
-      await cb(id ? ctx.params.ID : undefined, ctx.params).catch(
+      await cb(id ? ctx.params.ID : undefined, ctx.params, ctx.headers).catch(
         (e: HttpError) => {
           ctx.status = e.status;
           ctx.body = e.message;

@@ -9,7 +9,13 @@ class App extends CNShell {
       return;
     }
 
-    this.staticResponseRoute("/test", "Hello");
+    this.createRoute("/test", async (qry, params, headers) => {
+      this.info("id: %j", qry);
+      this.info("id: %j", params);
+      this.info("id: %j", headers);
+
+      return "OK";
+    });
   }
 
   async start(): Promise<boolean> {
