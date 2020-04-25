@@ -3,7 +3,7 @@ import CNLogger from "./cn-logger";
 import CNLoggerConsole from "./cn-logger-console";
 
 import Koa from "koa";
-import KoaRouter, { IRouterParamContext } from "koa-router";
+import KoaRouter from "koa-router";
 
 // import koaHelmet from "koa-helmet";
 import koaBodyparser from "koa-bodyparser";
@@ -561,9 +561,9 @@ abstract class CNShell {
     path: string,
     cb: (
       body: { [key: string]: any },
-      params?: IRouterParamContext,
+      params?: any,
       headers?: any,
-    ) => Promise<string>,
+    ) => Promise<any>,
     pattern?: HttpPropsPattern,
   ): void {
     path = `/${path.replace(/^\/+/, "").replace(/\/+$/, "")}`;
@@ -587,7 +587,7 @@ abstract class CNShell {
       }
 
       if (noException) {
-        let id = await cb(props, ctx.params, ctx.headers).catch(
+        let data = await cb(props, ctx.params, ctx.headers).catch(
           (e: HttpError) => {
             ctx.status = e.status;
             ctx.body = e.message;
@@ -599,10 +599,14 @@ abstract class CNShell {
 
         // Check if there was no exception caught
         if (noException) {
-          if (typeof id === "string" && id.length) {
-            ctx.set("Location", `${ctx.origin}${ctx.url}/${id}`);
+          if (typeof data === "string" && data.length) {
+            ctx.set("Location", `${ctx.origin}${ctx.url}/${data}`);
             ctx.status = 201;
           } else {
+            if (typeof data === "object") {
+              ctx.body = JSON.stringify(data);
+            }
+
             ctx.status = 200;
           }
         }
@@ -618,7 +622,7 @@ abstract class CNShell {
       id: string,
       query: { [key: string]: string },
       accepts: string,
-      params?: IRouterParamContext,
+      params?: any,
       headers?: any,
     ) => Promise<any>,
     id: boolean = true,
@@ -683,7 +687,7 @@ abstract class CNShell {
     cb: (
       id?: string,
       query?: { [key: string]: string },
-      params?: IRouterParamContext,
+      params?: any,
       headers?: any,
     ) => Promise<any>,
     id: boolean = true,
@@ -730,12 +734,7 @@ abstract class CNShell {
 
   updateRoute(
     path: string,
-    cb: (
-      body: any,
-      id?: string,
-      params?: IRouterParamContext,
-      headers?: any,
-    ) => Promise<void>,
+    cb: (body: any, id?: string, params?: any, headers?: any) => Promise<void>,
     id: boolean = true,
     pattern?: HttpPropsPattern,
   ): void {
@@ -789,11 +788,7 @@ abstract class CNShell {
 
   deleteRoute(
     path: string,
-    cb: (
-      id?: string,
-      params?: IRouterParamContext,
-      headers?: any,
-    ) => Promise<void>,
+    cb: (id?: string, params?: any, headers?: any) => Promise<void>,
     id: boolean = true,
   ): void {
     path = `/${path.replace(/^\/+/, "").replace(/\/+$/, "")}`;

@@ -14,7 +14,7 @@ class App extends CNShell {
       this.info("id: %j", params);
       this.info("id: %j", headers);
 
-      return "OK";
+      return { msg: "OK" };
     });
   }
 
