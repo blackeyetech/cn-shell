@@ -56,6 +56,7 @@ export interface HttpPropsPattern {
   [key: string]: {
     required: boolean;
     type: string;
+    allowEmpty?: boolean;
     default?: any;
     allowed?: any;
     pattern?: HttpPropsPattern; // If the type is an "object"
@@ -369,7 +370,10 @@ abstract class CNShell {
       let name = prop[0];
       let value = data[name] === undefined ? pattern[name].default : data[name];
 
-      if ((value === undefined || value === "") && pattern[name].required) {
+      if (
+        pattern[name].required &&
+        (value === undefined || (value === "" && !pattern[name].allowEmpty))
+      ) {
         let error: HttpError = {
           status: 400,
           message: `Missing required field '${name}'`,
