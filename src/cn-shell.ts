@@ -197,6 +197,10 @@ abstract class CNShell {
     return axios;
   }
 
+  get disabled(): boolean {
+    return this._disabled;
+  }
+
   // Setters here
   set level(level: any) {
     this._logger.level = level;
