@@ -4,6 +4,7 @@ import CNLoggerConsole from "./cn-logger-console";
 
 import Koa from "koa";
 import KoaRouter from "koa-router";
+import koaCompress from "koa-compress";
 
 // import koaHelmet from "koa-helmet";
 import koaBodyparser from "koa-bodyparser";
@@ -156,6 +157,8 @@ abstract class CNShell {
     if (master === undefined) {
       this._app = new Koa();
       this._router = new KoaRouter();
+      this._app.use(koaCompress());
+
       // this._app.use(koaHelmet());
       this._app.use(koaBodyparser());
     } else {
