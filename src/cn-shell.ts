@@ -21,6 +21,7 @@ const CFG_LOGGER = "LOGGER";
 const CFG_LOG_LEVEL = "LOG_LEVEL";
 
 const CFG_HTTP_KEEP_ALIVE_TIMEOUT = "HTTP_KEEP_ALIVE_TIMEOUT";
+const CFG_HTTP_HEADER_TIMEOUT = "HTTP_HEADER_TIMEOUT";
 const CFG_HTTP_PORT = "HTTP_PORT";
 const CFG_HTTP_INTERFACE = "HTTP_INTERFACE";
 const CFG_HTTP_LISTEN_LOCAL = "HTTP_LISTEN_LOCAL";
@@ -31,6 +32,7 @@ const DEFAULT_LOGGER = "CONSOLE";
 const DEFAULT_LOG_LEVEL = "INFO";
 
 const DEFAULT_HTTP_KEEP_ALIVE_TIMEOUT = "65000";
+const DEFAULT_HTTP_HEADER_TIMEOUT = "66000";
 const DEFAULT_HTTP_PORT = "8000";
 const DEFAULT_HEALTHCHECK_PATH = "/healthcheck";
 
@@ -255,6 +257,16 @@ abstract class CNShell {
       );
 
       this._server.keepAliveTimeout = parseInt(keepAlive, 10);
+
+      // NOTE: There is a potential race condition and the recommended
+      // solution is to make the header timeouts greater then the keep alive
+      // timeout. See - https://github.com/nodejs/node/issues/27363
+      let timeout = this.getCfg(
+        CFG_HTTP_HEADER_TIMEOUT,
+        DEFAULT_HTTP_HEADER_TIMEOUT,
+      );
+
+      this._server.headersTimeout = parseInt(timeout, 10);
 
       this.info("Now listening!");
     }
