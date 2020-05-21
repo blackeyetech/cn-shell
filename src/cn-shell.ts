@@ -10,7 +10,7 @@ import koaCompress from "koa-compress";
 import koaBodyparser from "koa-bodyparser";
 import koaMulter from "koa-multer";
 
-import axios, { AxiosStatic } from "axios";
+import axios, { AxiosInstance } from "axios";
 
 import { Readable } from "stream";
 import * as http from "http";
@@ -30,6 +30,7 @@ const CFG_HTTP_INTERFACE = "HTTP_INTERFACE";
 const CFG_USE_HTTPS = "USE_HTTPS";
 const CFG_HTTPS_KEY = "HTTPS_KEY_FILE";
 const CFG_HTTPS_CERT = "HTTPS_CERT_FILE";
+const CFG_ALLOW_SELF_SIGNED_CERTS = "ALLOW_SELF_SIGNED_CERTS";
 const CFG_HEALTHCHECK_PATH = "HEALTHCHECK_PATH";
 
 // Config defaults here
@@ -40,6 +41,7 @@ const DEFAULT_HTTP_KEEP_ALIVE_TIMEOUT = "65000";
 const DEFAULT_HTTP_HEADER_TIMEOUT = "66000";
 const DEFAULT_HTTP_PORT = "8000";
 const DEFAULT_USE_HTTPS = "Y";
+const DEFAULT_ALLOW_SELF_SIGNED_CERTS = "N";
 
 const DEFAULT_HEALTHCHECK_PATH = "/healthcheck";
 
@@ -92,6 +94,7 @@ abstract class CNShell {
   private _privateApp: Koa;
   private _privateRouter: KoaRouter;
   private _privateServer: http.Server;
+  private _axios: AxiosInstance;
 
   // Constructor here
   constructor(name: string, master?: CNShell) {
@@ -214,8 +217,8 @@ abstract class CNShell {
     return this._logger;
   }
 
-  get httpReq(): AxiosStatic {
-    return axios;
+  get httpReq(): AxiosInstance {
+    return this._axios;
   }
 
   get disabled(): boolean {
@@ -333,6 +336,25 @@ abstract class CNShell {
 
     if (this._master === undefined) {
       this.initHttp();
+    }
+
+    let allow = this.getCfg(
+      CFG_ALLOW_SELF_SIGNED_CERTS,
+      DEFAULT_ALLOW_SELF_SIGNED_CERTS,
+    );
+
+    if (allow?.toUpperCase() === "Y") {
+      this.info("Allowing self signed certs!");
+
+      this._axios = axios.create({
+        httpsAgent: new https.Agent({
+          rejectUnauthorized: false,
+        }),
+      });
+    } else {
+      this.info("Not allowing self signed certs!");
+
+      this._axios = axios.create();
     }
 
     this.info("Attempting to start application ...");
