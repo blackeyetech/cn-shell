@@ -52,7 +52,7 @@
     "husky": "^3.1.0",
     "lint-staged": "^9.5.0",
     "prettier": "^1.19.1",
-    "typescript": "^3.8.3"
+    "typescript": "^3.9.3"
   },
   "dependencies": {
     "@koa/multer": "^2.0.2",
@@ -61,10 +61,10 @@
     "@types/koa-compress": "^2.0.9",
     "@types/koa-helmet": "^3.1.2",
     "@types/koa-multer": "^1.0.0",
-    "@types/koa-router": "^7.4.0",
-    "@types/node": "^12.12.38",
+    "@types/koa-router": "^7.4.1",
+    "@types/node": "^12.12.41",
     "axios": "^0.19.2",
-    "koa": "^2.11.0",
+    "koa": "^2.12.0",
     "koa-bodyparser": "^4.3.0",
     "koa-compress": "^4.0.1",
     "koa-helmet": "^4.2.1",
