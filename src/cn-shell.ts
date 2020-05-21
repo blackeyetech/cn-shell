@@ -14,6 +14,9 @@ import axios, { AxiosStatic } from "axios";
 
 import { Readable } from "stream";
 import * as http from "http";
+import https from "https";
+import fs from "fs";
+import os from "os";
 
 // Config consts here
 const CFG_DISABLED = "DISABLED";
@@ -24,7 +27,9 @@ const CFG_HTTP_KEEP_ALIVE_TIMEOUT = "HTTP_KEEP_ALIVE_TIMEOUT";
 const CFG_HTTP_HEADER_TIMEOUT = "HTTP_HEADER_TIMEOUT";
 const CFG_HTTP_PORT = "HTTP_PORT";
 const CFG_HTTP_INTERFACE = "HTTP_INTERFACE";
-const CFG_HTTP_LISTEN_LOCAL = "HTTP_LISTEN_LOCAL";
+const CFG_USE_HTTPS = "USE_HTTPS";
+const CFG_HTTPS_KEY = "HTTPS_KEY_FILE";
+const CFG_HTTPS_CERT = "HTTPS_CERT_FILE";
 const CFG_HEALTHCHECK_PATH = "HEALTHCHECK_PATH";
 
 // Config defaults here
@@ -34,6 +39,8 @@ const DEFAULT_LOG_LEVEL = "INFO";
 const DEFAULT_HTTP_KEEP_ALIVE_TIMEOUT = "65000";
 const DEFAULT_HTTP_HEADER_TIMEOUT = "66000";
 const DEFAULT_HTTP_PORT = "8000";
+const DEFAULT_USE_HTTPS = "Y";
+
 const DEFAULT_HEALTHCHECK_PATH = "/healthcheck";
 
 // HTTP content type consts here
@@ -78,12 +85,13 @@ abstract class CNShell {
   private readonly _version: string;
   private _httpMaxSendRowsLimit: number;
   private _logger: CNLogger;
-  private _listenLocal: boolean;
 
-  private _app: Koa;
-  private _router: KoaRouter;
-  private _server: http.Server;
-  private _serverLocal: http.Server;
+  private _publicApp: Koa;
+  private _publicRouter: KoaRouter;
+  private _publicServer: http.Server;
+  private _privateApp: Koa;
+  private _privateRouter: KoaRouter;
+  private _privateServer: http.Server;
 
   // Constructor here
   constructor(name: string, master?: CNShell) {
@@ -148,23 +156,23 @@ abstract class CNShell {
 
     this._httpMaxSendRowsLimit = 1000;
 
-    let listenLocal: string = this.getCfg(CFG_HTTP_LISTEN_LOCAL);
-
-    if (listenLocal === "Y") {
-      this._listenLocal = true;
-    } else {
-      this._listenLocal = false;
-    }
-
     if (master === undefined) {
-      this._app = new Koa();
-      this._router = new KoaRouter();
-      this._app.use(koaCompress());
+      this._publicApp = new Koa();
+      this._publicRouter = new KoaRouter();
+      this._publicApp.use(koaCompress());
 
       // this._app.use(koaHelmet());
-      this._app.use(koaBodyparser());
+      this._publicApp.use(koaBodyparser());
+
+      this._privateApp = new Koa();
+      this._privateRouter = new KoaRouter();
+      this._privateApp.use(koaCompress());
+
+      // this._app.use(koaHelmet());
+      this._privateApp.use(koaBodyparser());
     } else {
-      this._router = master.router;
+      this._publicRouter = master.publicRouter;
+      this._privateRouter = master.privateRouter;
     }
   }
 
@@ -186,12 +194,20 @@ abstract class CNShell {
     return this._version;
   }
 
-  get router() {
-    return this._router;
+  get publicRouter() {
+    return this._publicRouter;
   }
 
-  get app() {
-    return this._app;
+  get privateRouter() {
+    return this._privateRouter;
+  }
+
+  get publicApp() {
+    return this._publicApp;
+  }
+
+  get privateApp() {
+    return this._privateApp;
   }
 
   get logger() {
@@ -211,6 +227,95 @@ abstract class CNShell {
     this._logger.level = level;
   }
 
+  // Private methods here
+  private initHttp(): void {
+    this.addHealthCheckEndpoint();
+
+    this.info("Initialising HTTP interfaces ...");
+
+    this._publicApp.use(this._publicRouter.routes());
+    this._privateApp.use(this._privateRouter.routes());
+
+    let httpif = this.getCfg(CFG_HTTP_INTERFACE);
+    let port = this.getCfg(CFG_HTTP_PORT, DEFAULT_HTTP_PORT);
+    let useHttps = this.getCfg(CFG_USE_HTTPS, DEFAULT_USE_HTTPS);
+
+    if (httpif !== undefined && httpif.length) {
+      this.info(`Finding IP for interface (${httpif})`);
+
+      let ifaces = os.networkInterfaces();
+
+      if (ifaces[httpif] === undefined) {
+        throw new Error(`${httpif} is not an interface on this server`);
+      }
+
+      let ip = "";
+
+      for (let i of ifaces[httpif]) {
+        if (i.family === "IPv4") {
+          ip = i.address;
+          this.info(`Found IP (${ip}) for interface ${httpif}`);
+          this.info(`Will listen on interface ${httpif} (IP: ${ip})`);
+
+          break;
+        }
+      }
+
+      if (ip.length === 0) {
+        throw new Error(`${httpif} is not an interface on this server`);
+      }
+
+      if (useHttps.toUpperCase() === "Y") {
+        this.info(`Attempting to listen on (https://${ip}:${port})`);
+
+        let keyfile = this.getRequiredCfg(CFG_HTTPS_KEY);
+        let certFile = this.getRequiredCfg(CFG_HTTPS_CERT);
+
+        const options = {
+          key: fs.readFileSync(keyfile),
+          cert: fs.readFileSync(certFile),
+        };
+
+        this._publicServer = https
+          .createServer(options, this._publicApp.callback())
+          .listen(parseInt(port, 10), ip);
+      } else {
+        this.info(`Attempting to listen on (http://${ip}:${port})`);
+
+        this._publicServer = http
+          .createServer(this._publicApp.callback())
+          .listen(parseInt(port, 10), ip);
+      }
+
+      // NOTE: The default node keep alive is 5 secs. This needs to be set
+      // higher then any load balancers in front of this CNA
+      let keepAlive = this.getCfg(
+        CFG_HTTP_KEEP_ALIVE_TIMEOUT,
+        DEFAULT_HTTP_KEEP_ALIVE_TIMEOUT,
+      );
+
+      this._publicServer.keepAliveTimeout = parseInt(keepAlive, 10);
+
+      // NOTE: There is a potential race condition and the recommended
+      // solution is to make the header timeouts greater then the keep alive
+      // timeout. See - https://github.com/nodejs/node/issues/27363
+      let timeout = this.getCfg(
+        CFG_HTTP_HEADER_TIMEOUT,
+        DEFAULT_HTTP_HEADER_TIMEOUT,
+      );
+
+      this._publicServer.headersTimeout = parseInt(timeout, 10);
+    }
+
+    this.info(`Attempting to listen on (http://127.0.0.1:${port})`);
+    this._privateServer = this._privateApp.listen(
+      parseInt(port, 10),
+      "127.0.0.1",
+    );
+
+    this.info("Now listening!");
+  }
+
   // Public methods here
   async init(testing?: boolean) {
     if (this._disabled) {
@@ -227,48 +332,7 @@ abstract class CNShell {
     process.on("SIGTERM", async () => await this.exit());
 
     if (this._master === undefined) {
-      this.addHealthCheckEndpoint();
-
-      this.info("Initialising HTTP interface ...");
-
-      this._app.use(this._router.routes());
-
-      let httpif = this.getCfg(CFG_HTTP_INTERFACE);
-      let port = this.getCfg(CFG_HTTP_PORT, DEFAULT_HTTP_PORT);
-
-      if (httpif !== undefined) {
-        this.info(`Attempting to listen on (${httpif}:${port})`);
-        this._server = this._app.listen(parseInt(port, 10), httpif);
-      } else {
-        this.info(`Attempting to listen on (${port})`);
-        this._server = this._app.listen(parseInt(port, 10));
-      }
-
-      if (this._listenLocal) {
-        this.info(`Attempting to listen on (127.0.0.1:${port})`);
-        this._serverLocal = this._app.listen(parseInt(port, 10), "127.0.0.1");
-      }
-
-      // NOTE: The default node keep alive is 5 secs. This needs to be set
-      // higher then any load balancers in front of this CNA
-      let keepAlive = this.getCfg(
-        CFG_HTTP_KEEP_ALIVE_TIMEOUT,
-        DEFAULT_HTTP_KEEP_ALIVE_TIMEOUT,
-      );
-
-      this._server.keepAliveTimeout = parseInt(keepAlive, 10);
-
-      // NOTE: There is a potential race condition and the recommended
-      // solution is to make the header timeouts greater then the keep alive
-      // timeout. See - https://github.com/nodejs/node/issues/27363
-      let timeout = this.getCfg(
-        CFG_HTTP_HEADER_TIMEOUT,
-        DEFAULT_HTTP_HEADER_TIMEOUT,
-      );
-
-      this._server.headersTimeout = parseInt(timeout, 10);
-
-      this.info("Now listening!");
+      this.initHttp();
     }
 
     this.info("Attempting to start application ...");
@@ -296,17 +360,15 @@ abstract class CNShell {
   async exit(hard: boolean = true): Promise<void> {
     this.info("Exiting ...");
 
-    if (this._server !== undefined) {
-      this.info("Closing main HTTP port on server now ...");
-      this._server.close();
+    if (this._publicServer !== undefined) {
+      this.info("Closing public HTTP port on server now ...");
+      this._publicServer.close();
       this.info("Port closed");
-
-      if (this._listenLocal) {
-        this.info("Closing local HTTP port on server now ...");
-        this._serverLocal.close();
-        this.info("Port closed");
-      }
     }
+
+    this.info("Closing private HTTP port on server now ...");
+    this._privateServer.close();
+    this.info("Port closed");
 
     this.info("Attempting to stop application ...");
     await this.stop().catch(e => {
@@ -502,12 +564,22 @@ abstract class CNShell {
     return found;
   }
 
-  staticResponseRoute(path: string, response: string): void {
+  staticResponseRoute(
+    path: string,
+    response: string,
+    isPrivate: boolean = false,
+  ): void {
     path = `/${path.replace(/^\/+/, "").replace(/\/+$/, "")}`;
 
-    this.info(`Adding static response route on path ${path}`);
+    this.info(
+      `Adding static response route on ${
+        isPrivate ? "private" : "public"
+      } path ${path}`,
+    );
 
-    this._router.get(path, async (ctx, next) => {
+    let router = isPrivate ? this._privateRouter : this._publicRouter;
+
+    router.get(path, async (ctx, next) => {
       ctx.status = 200;
       ctx.type = "application/json; charset=utf-8";
       ctx.body = JSON.stringify(response);
@@ -521,14 +593,21 @@ abstract class CNShell {
     cb: (file: string) => void,
     maxFileSize: number = 1024 * 1024 * 4,
     dest: string = "/tmp",
+    isPrivate: boolean = false,
   ) {
     path = `/${path.replace(/^\/+/, "").replace(/\/+$/, "")}`;
 
-    this.info(`Adding single file upload route on path ${path}`);
+    this.info(
+      `Adding single file upload route on path ${
+        isPrivate ? "private" : "public"
+      } ${path}`,
+    );
 
     let multer = koaMulter({ dest: dest, limits: { fileSize: maxFileSize } });
 
-    this._router.post(path, async (ctx: any, next) => {
+    let router = isPrivate ? this._privateRouter : this._publicRouter;
+
+    router.post(path, async (ctx: any, next) => {
       await multer.single(fieldName)(ctx, next);
       let response = await cb(ctx.req.file.path);
 
@@ -588,12 +667,17 @@ abstract class CNShell {
       headers?: any,
     ) => Promise<any>,
     pattern?: HttpPropsPattern,
+    isPrivate: boolean = false,
   ): void {
     path = `/${path.replace(/^\/+/, "").replace(/\/+$/, "")}`;
 
-    this.info(`Adding create route on path ${path}`);
+    this.info(
+      `Adding create route on ${isPrivate ? "private" : "public"} path ${path}`,
+    );
 
-    this._router.post(path, async (ctx, next) => {
+    let router = isPrivate ? this._privateRouter : this._publicRouter;
+
+    router.post(path, async (ctx, next) => {
       let noException = true;
       let props: { [key: string]: any } = ctx.request.body;
 
@@ -649,6 +733,7 @@ abstract class CNShell {
       headers?: any,
     ) => Promise<any>,
     id: boolean = true,
+    isPrivate: boolean = false,
   ): void {
     path = `/${path.replace(/^\/+/, "").replace(/\/+$/, "")}`;
 
@@ -656,9 +741,13 @@ abstract class CNShell {
       path = `${path}/:ID`;
     }
 
-    this.info(`Adding read route on path ${path}`);
+    this.info(
+      `Adding read route on path ${isPrivate ? "private" : "public"} ${path}`,
+    );
 
-    this._router.get(path, async (ctx, next) => {
+    let router = isPrivate ? this._privateRouter : this._publicRouter;
+
+    router.get(path, async (ctx, next) => {
       let accepts = ctx.accepts(ACCEPT_CONTENT_TYPES);
       let data: any;
 
@@ -714,6 +803,7 @@ abstract class CNShell {
       headers?: any,
     ) => Promise<any>,
     id: boolean = true,
+    isPrivate: boolean = false,
   ): void {
     path = `/${path.replace(/^\/+/, "").replace(/\/+$/, "")}`;
 
@@ -721,9 +811,15 @@ abstract class CNShell {
       path = `${path}/:ID`;
     }
 
-    this.info(`Adding simple read route on path ${path}`);
+    this.info(
+      `Adding simple read route on path ${
+        isPrivate ? "private" : "public"
+      } ${path}`,
+    );
 
-    this._router.get(path, async (ctx, next) => {
+    let router = isPrivate ? this._privateRouter : this._publicRouter;
+
+    router.get(path, async (ctx, next) => {
       let noException = true;
 
       let data = await cb(
@@ -760,6 +856,7 @@ abstract class CNShell {
     cb: (body: any, id?: string, params?: any, headers?: any) => Promise<void>,
     id: boolean = true,
     pattern?: HttpPropsPattern,
+    isPrivate: boolean = false,
   ): void {
     path = `/${path.replace(/^\/+/, "").replace(/\/+$/, "")}`;
 
@@ -767,9 +864,13 @@ abstract class CNShell {
       path = `${path}/:ID`;
     }
 
-    this.info(`Adding update route on path ${path}`);
+    this.info(
+      `Adding update route on path ${isPrivate ? "private" : "public"} ${path}`,
+    );
 
-    this._router.put(path, async (ctx, next) => {
+    let router = isPrivate ? this._privateRouter : this._publicRouter;
+
+    router.put(path, async (ctx, next) => {
       let noException = true;
       let props = ctx.request.body;
 
@@ -813,6 +914,7 @@ abstract class CNShell {
     path: string,
     cb: (id?: string, params?: any, headers?: any) => Promise<void>,
     id: boolean = true,
+    isPrivate: boolean = false,
   ): void {
     path = `/${path.replace(/^\/+/, "").replace(/\/+$/, "")}`;
 
@@ -820,9 +922,13 @@ abstract class CNShell {
       path = `${path}/:ID`;
     }
 
-    this.info(`Adding delete route on path ${path}`);
+    this.info(
+      `Adding delete route on path ${isPrivate ? "private" : "public"} ${path}`,
+    );
 
-    this._router.delete(path, async (ctx, next) => {
+    let router = isPrivate ? this._privateRouter : this._publicRouter;
+
+    router.delete(path, async (ctx, next) => {
       let noException = true;
 
       await cb(id ? ctx.params.ID : undefined, ctx.params, ctx.headers).catch(
@@ -850,7 +956,21 @@ abstract class CNShell {
 
     this._logger.info(`Adding Health Check endpoint on ${path}`);
 
-    this.router.get(path, async (ctx, next) => {
+    this._publicRouter.get(path, async (ctx, next) => {
+      let healthy = await this.healthCheck().catch(e => {
+        this.error(e);
+      });
+
+      if (healthy) {
+        ctx.status = 200;
+      } else {
+        ctx.status = 503;
+      }
+
+      await next();
+    });
+
+    this._privateRouter.get(path, async (ctx, next) => {
       let healthy = await this.healthCheck().catch(e => {
         this.error(e);
       });
