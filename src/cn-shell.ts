@@ -366,9 +366,11 @@ abstract class CNShell {
       this.info("Port closed");
     }
 
-    this.info("Closing private HTTP port on server now ...");
-    this._privateServer.close();
-    this.info("Port closed");
+    if (this._privateServer !== undefined) {
+      this.info("Closing private HTTP port on server now ...");
+      this._privateServer.close();
+      this.info("Port closed");
+    }
 
     this.info("Attempting to stop application ...");
     await this.stop().catch(e => {
@@ -386,13 +388,13 @@ abstract class CNShell {
     let evar = `CNA_${config.toUpperCase()}`;
     let value = process.env[evar];
 
-    if (this._logger !== undefined) {
-      this.info("Config (%s) = (%s)", evar, value);
-    }
-
     // If env var doesn't exist then return the default value
     if (value === undefined) {
-      return defaultVal;
+      value = defaultVal;
+    }
+
+    if (this._logger !== undefined) {
+      this.info("Config (%s) = (%s)", evar, value);
     }
 
     return value;
