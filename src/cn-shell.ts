@@ -81,8 +81,8 @@ export { Context } from "koa";
 abstract class CNShell {
   // Properties here
   protected readonly _disabled: boolean;
+  protected readonly _master: CNShell | undefined;
 
-  private _master: CNShell | undefined;
   private readonly _name: string;
   private readonly _version: string;
   private _httpMaxSendRowsLimit: number;
@@ -622,9 +622,9 @@ abstract class CNShell {
     path = `/${path.replace(/^\/+/, "").replace(/\/+$/, "")}`;
 
     this.info(
-      `Adding single file upload route on path ${
+      `Adding single file upload route on ${
         isPrivate ? "private" : "public"
-      } ${path}`,
+      } path ${path}`,
     );
 
     let multer = koaMulter({ dest: dest, limits: { fileSize: maxFileSize } });
@@ -766,7 +766,7 @@ abstract class CNShell {
     }
 
     this.info(
-      `Adding read route on path ${isPrivate ? "private" : "public"} ${path}`,
+      `Adding read route on ${isPrivate ? "private" : "public"} path ${path}`,
     );
 
     let router = isPrivate ? this._privateRouter : this._publicRouter;
@@ -836,9 +836,9 @@ abstract class CNShell {
     }
 
     this.info(
-      `Adding simple read route on path ${
+      `Adding simple read route on ${
         isPrivate ? "private" : "public"
-      } ${path}`,
+      } path ${path}`,
     );
 
     let router = isPrivate ? this._privateRouter : this._publicRouter;
@@ -889,7 +889,7 @@ abstract class CNShell {
     }
 
     this.info(
-      `Adding update route on path ${isPrivate ? "private" : "public"} ${path}`,
+      `Adding update route on ${isPrivate ? "private" : "public"} path ${path}`,
     );
 
     let router = isPrivate ? this._privateRouter : this._publicRouter;
@@ -947,7 +947,7 @@ abstract class CNShell {
     }
 
     this.info(
-      `Adding delete route on path ${isPrivate ? "private" : "public"} ${path}`,
+      `Adding delete route on ${isPrivate ? "private" : "public"} path ${path}`,
     );
 
     let router = isPrivate ? this._privateRouter : this._publicRouter;
