@@ -5,10 +5,6 @@ class App extends CNShell {
   constructor(name: string) {
     super(name);
 
-    if (this._disabled) {
-      return;
-    }
-
     this.simpleReadRoute("/test", async () => "Heeey!", false);
   }
 

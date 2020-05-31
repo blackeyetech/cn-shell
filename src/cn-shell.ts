@@ -19,7 +19,6 @@ import fs from "fs";
 import os from "os";
 
 // Config consts here
-const CFG_DISABLED = "DISABLED";
 const CFG_LOGGER = "LOGGER";
 const CFG_LOG_LEVEL = "LOG_LEVEL";
 
@@ -80,7 +79,6 @@ export { Context } from "koa";
 // CNShell class here
 abstract class CNShell {
   // Properties here
-  protected readonly _disabled: boolean;
   protected readonly _master: CNShell | undefined;
 
   private readonly _name: string;
@@ -141,20 +139,6 @@ abstract class CNShell {
           `LogLevel ${logLevel} is unknown. Setting level to INFO.`,
         );
         break;
-    }
-
-    let disabled = this.getCfg(
-      `${CFG_DISABLED}_${name.replace(/-| |\./, "").toUpperCase()}`,
-    );
-
-    if (disabled === "Y") {
-      this._disabled = true;
-    } else {
-      this._disabled = false;
-    }
-
-    if (this._disabled) {
-      return;
     }
 
     this._httpMaxSendRowsLimit = 1000;
@@ -219,10 +203,6 @@ abstract class CNShell {
 
   get httpReq(): AxiosInstance {
     return this._axios;
-  }
-
-  get disabled(): boolean {
-    return this._disabled;
   }
 
   // Setters here
@@ -321,11 +301,6 @@ abstract class CNShell {
 
   // Public methods here
   async init(testing?: boolean) {
-    if (this._disabled) {
-      this.info("This extension had been disabled!");
-      return;
-    }
-
     this.info("Initialising ...");
     this.info(`CN-Shell Version (${this._version})`);
     this.info(`NODE_ENV (${NODE_ENV})`);
