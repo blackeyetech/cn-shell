@@ -227,6 +227,7 @@ abstract class CNShell {
       this.info(`Finding IP for interface (${httpif})`);
 
       let ifaces = os.networkInterfaces();
+      this.info("Interfaces on host: %j", ifaces);
 
       if (ifaces[httpif] === undefined) {
         throw new Error(`${httpif} is not an interface on this server`);
