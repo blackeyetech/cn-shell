@@ -572,11 +572,18 @@ abstract class CNShell {
     for (let header in checks) {
       // Check if the header DOES NOT exsist
       if (headers[header] === undefined) {
+        this.error("Could not find AuthZ header (%s) in the headers", header);
         return false;
       }
 
       // Check if the request header DOES NOT contain a valid value
       if (checks[header].includes(headers[header]) === false) {
+        this.error(
+          "AuthZ header (%s) was this (%s) which did not match any of these values (%j)",
+          header,
+          headers[header],
+          checks[header],
+        );
         return false;
       }
     }
