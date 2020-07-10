@@ -6,6 +6,10 @@ class App extends CNShell {
     super(name);
 
     this.simpleReadRoute("/test", async () => "Heeey!", false);
+    this.staticResponseRoute("/auth", "You're in", true, {
+      check1: ["in", "or", "out"],
+      check2: ["or", "out"],
+    });
   }
 
   async start(): Promise<boolean> {

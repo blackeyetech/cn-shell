@@ -564,10 +564,34 @@ abstract class CNShell {
     return found;
   }
 
+  checkAuthZHeaders(
+    checks: { [key: string]: string[] },
+    headers: any,
+  ): boolean {
+    // Step through each header
+    for (let header in checks) {
+      // Check if the header DOES NOT exsist
+      if (headers[header] === undefined) {
+        return false;
+      }
+
+      // Check if the request header DOES NOT contain a valid value
+      if (checks[header].includes(headers[header]) === false) {
+        return false;
+      }
+    }
+
+    // Everything looks peachy, return OK
+    return true;
+  }
+
   staticResponseRoute(
     path: string,
     response: string,
     isPrivate: boolean = false,
+    authZHeaders?: {
+      [key: string]: string[];
+    },
   ): void {
     path = `/${path.replace(/^\/+/, "").replace(/\/+$/, "")}`;
 
@@ -580,6 +604,15 @@ abstract class CNShell {
     let router = isPrivate ? this._privateRouter : this._publicRouter;
 
     router.get(path, async (ctx, next) => {
+      if (
+        authZHeaders !== undefined &&
+        this.checkAuthZHeaders(authZHeaders, ctx.headers) === false
+      ) {
+        ctx.status = 401;
+        await next();
+        return;
+      }
+
       ctx.status = 200;
       ctx.type = "application/json; charset=utf-8";
       ctx.body = JSON.stringify(response);
@@ -668,6 +701,9 @@ abstract class CNShell {
     ) => Promise<any>,
     pattern?: HttpPropsPattern,
     isPrivate: boolean = false,
+    authZHeaders?: {
+      [key: string]: string[];
+    },
   ): void {
     path = `/${path.replace(/^\/+/, "").replace(/\/+$/, "")}`;
 
@@ -678,6 +714,15 @@ abstract class CNShell {
     let router = isPrivate ? this._privateRouter : this._publicRouter;
 
     router.post(path, async (ctx, next) => {
+      if (
+        authZHeaders !== undefined &&
+        this.checkAuthZHeaders(authZHeaders, ctx.headers) === false
+      ) {
+        ctx.status = 401;
+        await next();
+        return;
+      }
+
       let noException = true;
       let props: { [key: string]: any } = ctx.request.body;
 
@@ -734,6 +779,9 @@ abstract class CNShell {
     ) => Promise<any>,
     id: boolean = true,
     isPrivate: boolean = false,
+    authZHeaders?: {
+      [key: string]: string[];
+    },
   ): void {
     path = `/${path.replace(/^\/+/, "").replace(/\/+$/, "")}`;
 
@@ -748,6 +796,14 @@ abstract class CNShell {
     let router = isPrivate ? this._privateRouter : this._publicRouter;
 
     router.get(path, async (ctx, next) => {
+      if (
+        authZHeaders !== undefined &&
+        this.checkAuthZHeaders(authZHeaders, ctx.headers) === false
+      ) {
+        ctx.status = 401;
+        await next();
+        return;
+      }
       let accepts = ctx.accepts(ACCEPT_CONTENT_TYPES);
       let data: any;
 
@@ -804,6 +860,9 @@ abstract class CNShell {
     ) => Promise<any>,
     id: boolean = true,
     isPrivate: boolean = false,
+    authZHeaders?: {
+      [key: string]: string[];
+    },
   ): void {
     path = `/${path.replace(/^\/+/, "").replace(/\/+$/, "")}`;
 
@@ -820,6 +879,15 @@ abstract class CNShell {
     let router = isPrivate ? this._privateRouter : this._publicRouter;
 
     router.get(path, async (ctx, next) => {
+      if (
+        authZHeaders !== undefined &&
+        this.checkAuthZHeaders(authZHeaders, ctx.headers) === false
+      ) {
+        ctx.status = 401;
+        await next();
+        return;
+      }
+
       let noException = true;
 
       let data = await cb(
@@ -857,6 +925,9 @@ abstract class CNShell {
     id: boolean = true,
     pattern?: HttpPropsPattern,
     isPrivate: boolean = false,
+    authZHeaders?: {
+      [key: string]: string[];
+    },
   ): void {
     path = `/${path.replace(/^\/+/, "").replace(/\/+$/, "")}`;
 
@@ -871,6 +942,15 @@ abstract class CNShell {
     let router = isPrivate ? this._privateRouter : this._publicRouter;
 
     router.put(path, async (ctx, next) => {
+      if (
+        authZHeaders !== undefined &&
+        this.checkAuthZHeaders(authZHeaders, ctx.headers) === false
+      ) {
+        ctx.status = 401;
+        await next();
+        return;
+      }
+
       let noException = true;
       let props = ctx.request.body;
 
@@ -915,6 +995,9 @@ abstract class CNShell {
     cb: (id?: string, params?: any, headers?: any) => Promise<void>,
     id: boolean = true,
     isPrivate: boolean = false,
+    authZHeaders?: {
+      [key: string]: string[];
+    },
   ): void {
     path = `/${path.replace(/^\/+/, "").replace(/\/+$/, "")}`;
 
@@ -929,6 +1012,15 @@ abstract class CNShell {
     let router = isPrivate ? this._privateRouter : this._publicRouter;
 
     router.delete(path, async (ctx, next) => {
+      if (
+        authZHeaders !== undefined &&
+        this.checkAuthZHeaders(authZHeaders, ctx.headers) === false
+      ) {
+        ctx.status = 401;
+        await next();
+        return;
+      }
+
       let noException = true;
 
       await cb(id ? ctx.params.ID : undefined, ctx.params, ctx.headers).catch(
