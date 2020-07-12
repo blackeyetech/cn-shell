@@ -705,6 +705,7 @@ abstract class CNShell {
       body: { [key: string]: any },
       params?: any,
       headers?: any,
+      query?: { [key: string]: string },
     ) => Promise<any>,
     pattern?: HttpPropsPattern,
     isPrivate: boolean = false,
@@ -746,7 +747,7 @@ abstract class CNShell {
       }
 
       if (noException) {
-        let data = await cb(props, ctx.params, ctx.headers).catch(
+        let data = await cb(props, ctx.params, ctx.headers, ctx.query).catch(
           (e: HttpError) => {
             ctx.status = e.status;
             ctx.body = e.message;
@@ -928,7 +929,13 @@ abstract class CNShell {
 
   updateRoute(
     path: string,
-    cb: (body: any, id?: string, params?: any, headers?: any) => Promise<void>,
+    cb: (
+      body: any,
+      id?: string,
+      params?: any,
+      headers?: any,
+      query?: { [key: string]: string },
+    ) => Promise<void>,
     id: boolean = true,
     pattern?: HttpPropsPattern,
     isPrivate: boolean = false,
@@ -979,6 +986,7 @@ abstract class CNShell {
           id ? ctx.params.ID : undefined,
           ctx.params,
           ctx.headers,
+          ctx.query,
         ).catch((e: HttpError) => {
           ctx.status = e.status;
           ctx.body = e.message;
@@ -999,7 +1007,12 @@ abstract class CNShell {
 
   deleteRoute(
     path: string,
-    cb: (id?: string, params?: any, headers?: any) => Promise<void>,
+    cb: (
+      id?: string,
+      params?: any,
+      headers?: any,
+      query?: { [key: string]: string },
+    ) => Promise<void>,
     id: boolean = true,
     isPrivate: boolean = false,
     authZHeaders?: {
@@ -1030,15 +1043,18 @@ abstract class CNShell {
 
       let noException = true;
 
-      await cb(id ? ctx.params.ID : undefined, ctx.params, ctx.headers).catch(
-        (e: HttpError) => {
-          ctx.status = e.status;
-          ctx.body = e.message;
-          ctx.type = "text/plain; charset=utf-8";
+      await cb(
+        id ? ctx.params.ID : undefined,
+        ctx.params,
+        ctx.headers,
+        ctx.query,
+      ).catch((e: HttpError) => {
+        ctx.status = e.status;
+        ctx.body = e.message;
+        ctx.type = "text/plain; charset=utf-8";
 
-          noException = false;
-        },
-      );
+        noException = false;
+      });
 
       // Check if there was no exception caught
       if (noException) {
