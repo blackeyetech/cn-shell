@@ -94,6 +94,8 @@ abstract class CNShell {
   private _privateServer: http.Server;
   private _axios: AxiosInstance;
 
+  private _healthCheckPath: string;
+
   // Constructor here
   constructor(name: string, master?: CNShell) {
     this._master = master;
@@ -203,6 +205,10 @@ abstract class CNShell {
 
   get httpReq(): AxiosInstance {
     return this._axios;
+  }
+
+  get healthCheckPath() {
+    return this._healthCheckPath;
   }
 
   // Setters here
@@ -1068,6 +1074,7 @@ abstract class CNShell {
   // Private methods here
   private addHealthCheckEndpoint(): void {
     let path = this.getCfg(CFG_HEALTHCHECK_PATH, DEFAULT_HEALTHCHECK_PATH);
+    this._healthCheckPath = path;
 
     this._logger.info(`Adding Health Check endpoint on ${path}`);
 
