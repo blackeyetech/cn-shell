@@ -113,7 +113,7 @@ abstract class CNShell {
         break;
     }
 
-    let logLevel: string = this.getCfg(CFG_LOG_LEVEL, DEFAULT_LOG_LEVEL);
+    let logLevel: string = this.getCfg(CFG_LOG_LEVEL, DEFAULT_LOG_LEVEL, true);
 
     switch (logLevel.toUpperCase()) {
       case "SILENT":
@@ -388,7 +388,7 @@ abstract class CNShell {
     }
   }
 
-  getCfg(config: string, defaultVal: string = ""): string {
+  getCfg(config: string, defaultVal = "", silent = false): string {
     let evar = `CNA_${config.toUpperCase()}`;
     let value = process.env[evar];
 
@@ -397,18 +397,18 @@ abstract class CNShell {
       value = defaultVal;
     }
 
-    if (this._logger !== undefined) {
+    if (this._logger !== undefined && silent === false) {
       this.info("Config (%s) = (%s)", evar, value);
     }
 
     return value;
   }
 
-  getRequiredCfg(config: string): string {
+  getRequiredCfg(config: string, silent = false): string {
     let evar = `CNA_${config.toUpperCase()}`;
     let value = process.env[evar];
 
-    if (this._logger !== undefined) {
+    if (this._logger !== undefined && silent === false) {
       this.info("Config (%s) = (%s)", evar, value);
     }
 
