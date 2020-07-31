@@ -766,14 +766,17 @@ abstract class CNShell {
         // Check if there was no exception caught
         if (noException) {
           if (typeof data === "string" && data.length) {
+            // An ID was returned - set the Location header
             ctx.set("Location", `${ctx.origin}${ctx.url}/${data}`);
             ctx.status = 201;
           } else {
             if (typeof data === "object") {
+              ctx.type = "application/json; charset=utf-8";
               ctx.body = JSON.stringify(data);
+              ctx.status = 200;
+            } else {
+              ctx.status = 204;
             }
-
-            ctx.status = 200;
           }
         }
       }
@@ -1004,7 +1007,7 @@ abstract class CNShell {
 
       // Check if there was no exception caught
       if (noException) {
-        ctx.status = 200;
+        ctx.status = 204;
       }
 
       await next();
@@ -1064,7 +1067,7 @@ abstract class CNShell {
 
       // Check if there was no exception caught
       if (noException) {
-        ctx.status = 200;
+        ctx.status = 204;
       }
 
       await next();
