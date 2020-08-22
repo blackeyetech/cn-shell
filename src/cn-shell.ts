@@ -7,6 +7,8 @@ import KoaRouter from "koa-router";
 import koaCompress from "koa-compress";
 
 // import koaHelmet from "koa-helmet";
+import cors from "@koa/cors";
+
 import koaBodyparser from "koa-bodyparser";
 import koaMulter from "koa-multer";
 
@@ -31,6 +33,8 @@ const CFG_HTTPS_KEY = "HTTPS_KEY_FILE";
 const CFG_HTTPS_CERT = "HTTPS_CERT_FILE";
 const CFG_ALLOW_SELF_SIGNED_CERTS = "ALLOW_SELF_SIGNED_CERTS";
 const CFG_HEALTHCHECK_PATH = "HEALTHCHECK_PATH";
+const CFG_ENABLE_CORS = "HTTP_ENABLE_CORS";
+// const CFG_CORS_ORIGIN = "HTTP_CORS_ORIGIN";
 
 // Config defaults here
 const DEFAULT_LOGGER = "CONSOLE";
@@ -146,7 +150,12 @@ abstract class CNShell {
     this._httpMaxSendRowsLimit = 1000;
 
     if (master === undefined) {
+      let enableCors = this.getCfg(CFG_ENABLE_CORS);
+
       this._publicApp = new Koa();
+      if (enableCors.toUpperCase() === "Y") {
+        this._publicApp.use(cors());
+      }
       this._publicRouter = new KoaRouter();
       this._publicApp.use(koaCompress());
 
