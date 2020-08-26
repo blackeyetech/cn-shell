@@ -147,6 +147,25 @@ abstract class CNShell {
         break;
     }
 
+    let allow = this.getCfg(
+      CFG_ALLOW_SELF_SIGNED_CERTS,
+      DEFAULT_ALLOW_SELF_SIGNED_CERTS,
+    );
+
+    if (allow.toUpperCase() === "Y") {
+      this.info("Allowing self signed certs!");
+
+      this._axios = axios.create({
+        httpsAgent: new https.Agent({
+          rejectUnauthorized: false,
+        }),
+      });
+    } else {
+      this.info("Not allowing self signed certs!");
+
+      this._axios = axios.create();
+    }
+
     this._httpMaxSendRowsLimit = 1000;
 
     if (master === undefined) {
@@ -316,6 +335,8 @@ abstract class CNShell {
   }
 
   // Public methods here
+
+  // This method is only for a CN App - don't call for a CN extension
   async init(testing?: boolean) {
     this.info("Initialising ...");
     this.info(`CN-Shell Version (${this._version})`);
@@ -327,25 +348,6 @@ abstract class CNShell {
 
     if (this._master === undefined) {
       this.initHttp();
-    }
-
-    let allow = this.getCfg(
-      CFG_ALLOW_SELF_SIGNED_CERTS,
-      DEFAULT_ALLOW_SELF_SIGNED_CERTS,
-    );
-
-    if (allow?.toUpperCase() === "Y") {
-      this.info("Allowing self signed certs!");
-
-      this._axios = axios.create({
-        httpsAgent: new https.Agent({
-          rejectUnauthorized: false,
-        }),
-      });
-    } else {
-      this.info("Not allowing self signed certs!");
-
-      this._axios = axios.create();
     }
 
     this.info("Attempting to start application ...");
