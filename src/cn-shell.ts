@@ -23,6 +23,7 @@ import os from "os";
 // Config consts here
 const CFG_LOGGER = "LOGGER";
 const CFG_LOG_LEVEL = "LOG_LEVEL";
+const CFG_LOG_TIMESTAMP = "LOG_TIMESTAMP";
 
 const CFG_HTTP_KEEP_ALIVE_TIMEOUT = "HTTP_KEEP_ALIVE_TIMEOUT";
 const CFG_HTTP_HEADER_TIMEOUT = "HTTP_HEADER_TIMEOUT";
@@ -39,6 +40,7 @@ const CFG_ENABLE_CORS = "HTTP_ENABLE_CORS";
 // Config defaults here
 const DEFAULT_LOGGER = "CONSOLE";
 const DEFAULT_LOG_LEVEL = "INFO";
+const DEFAULT_LOG_TIMESTAMP = "N";
 
 const DEFAULT_HTTP_KEEP_ALIVE_TIMEOUT = "65000";
 const DEFAULT_HTTP_HEADER_TIMEOUT = "66000";
@@ -116,6 +118,14 @@ abstract class CNShell {
         this.warn(`Logger ${logger} is unknown. Using console logger.`);
         break;
     }
+
+    let logTimestamp = this.getCfg(
+      CFG_LOG_TIMESTAMP,
+      DEFAULT_LOG_TIMESTAMP,
+      true,
+    );
+    this._logger.logTimestamps =
+      logTimestamp.toUpperCase() === "Y" ? true : false;
 
     let logLevel: string = this.getCfg(CFG_LOG_LEVEL, DEFAULT_LOG_LEVEL, true);
 

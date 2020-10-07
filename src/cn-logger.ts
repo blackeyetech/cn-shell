@@ -10,6 +10,7 @@ enum CNLogLevel {
 abstract class CNLogger {
   protected _name: string;
   protected _level: CNLogLevel;
+  protected _logTimestamp: boolean;
 
   constructor(name: string) {
     this._name = name;
@@ -26,6 +27,10 @@ abstract class CNLogger {
 
   set level(level: CNLogLevel) {
     this._level = level;
+  }
+
+  set logTimestamps(logTimestamps: boolean) {
+    this._logTimestamp = logTimestamps;
   }
 
   static get CNLogLevel(): typeof CNLogLevel {
