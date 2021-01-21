@@ -352,10 +352,6 @@ abstract class CNShell {
     this.info(`CN-Shell Version (${this._version})`);
     this.info(`NODE_ENV (${NODE_ENV})`);
 
-    this.info("Setting up event handler for SIGINT and SIGTERM");
-    process.on("SIGINT", async () => await this.exit());
-    process.on("SIGTERM", async () => await this.exit());
-
     if (this._master === undefined) {
       this.initHttp();
     }
@@ -378,6 +374,10 @@ abstract class CNShell {
     }
 
     if (this._master === undefined) {
+      this.info("Setting up event handler for SIGINT and SIGTERM");
+      process.on("SIGINT", async () => await this.exit());
+      process.on("SIGTERM", async () => await this.exit());
+
       this.info("Ready to Rock and Roll baby!");
     }
   }
