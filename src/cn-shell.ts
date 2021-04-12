@@ -208,9 +208,9 @@ abstract class CNShell {
   }
 
   // Abstract methods here
-  abstract async start(): Promise<boolean>;
-  abstract async stop(): Promise<void>;
-  abstract async healthCheck(): Promise<boolean>;
+  abstract start(): Promise<boolean>;
+  abstract stop(): Promise<void>;
+  abstract healthCheck(): Promise<boolean>;
 
   // Getters here
   get name(): string {
@@ -689,7 +689,10 @@ abstract class CNShell {
     });
   }
 
-  async sendChunkedArray(ctx: Koa.Context, data: { [key: string]: any }[]) {
+  async sendChunkedArray(
+    ctx: Koa.Context,
+    data: { [key: string]: any }[],
+  ): Promise<void> {
     return new Promise(resolve => {
       let body = new Readable();
       body._read = function() {};
@@ -732,7 +735,7 @@ abstract class CNShell {
       body: { [key: string]: any },
       params: any,
       headers: any,
-      query: { [key: string]: string },
+      query: { [key: string]: string | string[] },
     ) => Promise<any>,
     pattern?: HttpPropsPattern,
     isPrivate: boolean = false,
@@ -810,7 +813,7 @@ abstract class CNShell {
     path: string,
     cb: (
       id: string,
-      query: { [key: string]: string },
+      query: { [key: string]: string | string[] },
       accepts: string,
       params: any,
       headers: any,
@@ -852,8 +855,8 @@ abstract class CNShell {
       }
 
       data = await cb(
-        ctx.query,
         id ? ctx.params.ID : undefined,
+        ctx.query,
         accepts,
         ctx.params,
         ctx.headers,
@@ -892,7 +895,7 @@ abstract class CNShell {
     path: string,
     cb: (
       id: string,
-      query: { [key: string]: string },
+      query: { [key: string]: string | string[] },
       params: any,
       headers: any,
     ) => Promise<any>,
@@ -964,7 +967,7 @@ abstract class CNShell {
       id: string,
       params: any,
       headers: any,
-      query: { [key: string]: string },
+      query: { [key: string]: string | string[] },
     ) => Promise<void>,
     id: boolean = true,
     pattern?: HttpPropsPattern,
@@ -1041,7 +1044,7 @@ abstract class CNShell {
       id: string,
       params: any,
       headers: any,
-      query: { [key: string]: string },
+      query: { [key: string]: string | string[] },
     ) => Promise<void>,
     id: boolean = true,
     isPrivate: boolean = false,
