@@ -20,6 +20,9 @@ import https from "https";
 import fs from "fs";
 import os from "os";
 
+import { promises as fsPromises } from "fs";
+import path from "path";
+
 // Config consts here
 const CFG_LOGGER = "LOGGER";
 const CFG_LOG_LEVEL = "LOG_LEVEL";
@@ -855,7 +858,7 @@ abstract class CNShell {
       }
 
       data = await cb(
-        id ? ctx.params.ID : undefined,
+        ctx.params.ID,
         ctx.query,
         accepts,
         ctx.params,
@@ -932,7 +935,7 @@ abstract class CNShell {
       let noException = true;
 
       let data = await cb(
-        id ? ctx.params.ID : undefined,
+        ctx.params.ID,
         ctx.query,
         ctx.params,
         ctx.headers,
@@ -1016,7 +1019,7 @@ abstract class CNShell {
       if (noException) {
         await cb(
           props,
-          id ? ctx.params.ID : undefined,
+          ctx.params.ID,
           ctx.params,
           ctx.headers,
           ctx.query,
@@ -1076,18 +1079,15 @@ abstract class CNShell {
 
       let noException = true;
 
-      await cb(
-        id ? ctx.params.ID : undefined,
-        ctx.params,
-        ctx.headers,
-        ctx.query,
-      ).catch((e: HttpError) => {
-        ctx.status = e.status;
-        ctx.body = e.message;
-        ctx.type = "text/plain; charset=utf-8";
+      await cb(ctx.params.ID, ctx.params, ctx.headers, ctx.query).catch(
+        (e: HttpError) => {
+          ctx.status = e.status;
+          ctx.body = e.message;
+          ctx.type = "text/plain; charset=utf-8";
 
-        noException = false;
-      });
+          noException = false;
+        },
+      );
 
       // Check if there was no exception caught
       if (noException) {
@@ -1096,6 +1096,26 @@ abstract class CNShell {
 
       await next();
     });
+  }
+
+  // File helper methods here
+  async getAllFiles(dir: string): Promise<string[]> {
+    let files: string[] = [];
+
+    const list = await fsPromises.readdir(dir);
+    for (let f of list) {
+      const file = path.join(dir, f);
+      const stat = await fsPromises.stat(file);
+
+      if (stat.isDirectory()) {
+        let newFiles = await this.getAllFiles(file);
+        files = files.concat(newFiles);
+      } else {
+        files.push(file);
+      }
+    }
+
+    return files;
   }
 
   // Private methods here
