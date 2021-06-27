@@ -785,11 +785,14 @@ abstract class CNShell {
       }
 
       let noException = true;
-      let props: { [key: string]: any } = ctx.request.body;
+      let props = <{ [key: string]: any }>ctx.request.body;
 
       if (pattern !== undefined) {
         try {
-          props = this.checkProps(ctx.request.body, pattern);
+          props = this.checkProps(
+            <{ [key: string]: any }>ctx.request.body,
+            pattern,
+          );
         } catch (e) {
           ctx.status = e.status;
           ctx.body = e.message;
@@ -1022,11 +1025,14 @@ abstract class CNShell {
       }
 
       let noException = true;
-      let props = ctx.request.body;
+      let props = <{ [key: string]: any }>ctx.request.body;
 
       if (pattern !== undefined) {
         try {
-          props = this.checkProps(ctx.request.body, pattern);
+          props = this.checkProps(
+            <{ [key: string]: any }>ctx.request.body,
+            pattern,
+          );
         } catch (e) {
           ctx.status = e.status;
           ctx.body = e.message;
