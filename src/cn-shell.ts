@@ -23,6 +23,8 @@ import os from "os";
 import { promises as fsPromises } from "fs";
 import path from "path";
 
+import minimist from "minimist";
+
 // Config consts here
 const CFG_LOGGER = "LOGGER";
 const CFG_LOG_LEVEL = "LOG_LEVEL";
@@ -104,12 +106,15 @@ abstract class CNShell {
   private _axios: AxiosInstance;
 
   private _healthCheckPath: string;
+  private _minimist: minimist.ParsedArgs;
 
   // Constructor here
   constructor(name: string, master?: CNShell) {
     this._master = master;
     this._name = name;
     this._version = version;
+
+    this._minimist = minimist(process.argv.slice(2));
 
     let logger: string = this.getCfg(CFG_LOGGER, DEFAULT_LOGGER);
     switch (logger.toUpperCase()) {
@@ -440,6 +445,21 @@ abstract class CNShell {
       throw Error(
         `Config parameter (CNA_${config.toUpperCase()}) was not set!`,
       );
+    }
+
+    return value;
+  }
+
+  getCmdLineParam(param: string, defaultVal = "", silent = false): any {
+    let value = this._minimist[param];
+
+    // If param doesn't exist then return the default value
+    if (value === undefined) {
+      value = defaultVal;
+    }
+
+    if (this._logger !== undefined && silent === false) {
+      this.info("CLI parameter (%s) = (%s)", param, value);
     }
 
     return value;
