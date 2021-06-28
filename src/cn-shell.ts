@@ -417,7 +417,12 @@ abstract class CNShell {
     }
   }
 
-  getCfg(config: string, defaultVal = "", silent = false): string {
+  getCfg(
+    config: string,
+    defaultVal = "",
+    silent = false,
+    redact = false,
+  ): string {
     let evar = `CNA_${config.toUpperCase()}`;
     let value = process.env[evar];
 
@@ -427,18 +432,18 @@ abstract class CNShell {
     }
 
     if (this._logger !== undefined && silent === false) {
-      this.info("Config (%s) = (%s)", evar, value);
+      this.info("Config (%s) = (%s)", evar, redact ? "redacted" : value);
     }
 
     return value;
   }
 
-  getRequiredCfg(config: string, silent = false): string {
+  getRequiredCfg(config: string, silent = false, redact = false): string {
     let evar = `CNA_${config.toUpperCase()}`;
     let value = process.env[evar];
 
     if (this._logger !== undefined && silent === false) {
-      this.info("Config (%s) = (%s)", evar, value);
+      this.info("Config (%s) = (%s)", evar, redact ? "redacted" : value);
     }
 
     if (value === undefined) {
