@@ -518,7 +518,7 @@ abstract class CNShell {
         throw error;
       }
 
-      if (value === undefined) {
+      if (value === undefined || value === null) {
         continue;
       }
 
