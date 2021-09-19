@@ -87,6 +87,8 @@ export interface HttpPropsPattern {
 
 export { Context } from "koa";
 
+export { CNLogger };
+
 // CNShell class here
 abstract class CNShell {
   // Properties here
