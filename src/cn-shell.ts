@@ -2,7 +2,7 @@
 import CNLogger from "./cn-logger";
 import CNLoggerConsole from "./cn-logger-console";
 
-import Koa from "koa";
+import Koa, { HttpError } from "koa";
 import KoaRouter from "koa-router";
 import koaCompress from "koa-compress";
 
@@ -801,10 +801,16 @@ abstract class CNShell {
             pattern,
           );
         } catch (e) {
-          ctx.status = e.status;
-          ctx.body = e.message;
-          ctx.type = "text/plain; charset=utf-8";
+          if (e instanceof HttpError) {
+            ctx.status = e.status;
+            ctx.body = e.message;
+          } else {
+            ctx.status = 503;
+            ctx.body = "Unknown error occured";
 
+            this.error("%j", e);
+          }
+          ctx.type = "text/plain; charset=utf-8";
           noException = false;
         }
       }
@@ -1041,8 +1047,16 @@ abstract class CNShell {
             pattern,
           );
         } catch (e) {
-          ctx.status = e.status;
-          ctx.body = e.message;
+          if (e instanceof HttpError) {
+            ctx.status = e.status;
+            ctx.body = e.message;
+          } else {
+            ctx.status = 503;
+            ctx.body = "Unknown error occured";
+
+            this.error("%j", e);
+          }
+
           ctx.type = "text/plain; charset=utf-8";
 
           noException = false;
