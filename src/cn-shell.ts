@@ -904,12 +904,6 @@ abstract class CNShell {
         ctx.headers,
       );
 
-      if (returnHeaders !== undefined) {
-        for (let header in returnHeaders) {
-          ctx.set(header, returnHeaders[header]);
-        }
-      }
-
       switch (accepts) {
         case HTTP_CONTENT_TYPE_XLSX:
           ctx.type = HTTP_CONTENT_TYPE_XLSX;
@@ -933,6 +927,12 @@ abstract class CNShell {
           break;
         default:
           ctx.status = 406;
+      }
+
+      if (returnHeaders !== undefined) {
+        for (let header in returnHeaders) {
+          ctx.set(header, returnHeaders[header]);
+        }
       }
 
       await next();
@@ -997,12 +997,6 @@ abstract class CNShell {
 
       // Check if there was no exception caught
       if (noException) {
-        if (returnHeaders !== undefined) {
-          for (let header in returnHeaders) {
-            ctx.set(header, returnHeaders[header]);
-          }
-        }
-
         if (Array.isArray(data) && data.length > this._httpMaxSendRowsLimit) {
           ctx.set("Transfer-Encoding", "chunked");
           await this.sendChunkedArray(ctx, data);
@@ -1010,6 +1004,12 @@ abstract class CNShell {
           ctx.status = 200;
           ctx.body = JSON.stringify(data);
           ctx.type = "application/json; charset=utf-8";
+
+          if (returnHeaders !== undefined) {
+            for (let header in returnHeaders) {
+              ctx.set(header, returnHeaders[header]);
+            }
+          }
         }
       }
 
