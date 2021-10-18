@@ -863,7 +863,7 @@ abstract class CNShell {
       [key: string]: string[];
     },
     returnHeaders?: {
-      [key: string]: string[];
+      [key: string]: string;
     },
   ): void {
     path = `/${path.replace(/^\/+/, "").replace(/\/+$/, "")}`;
@@ -953,7 +953,7 @@ abstract class CNShell {
       [key: string]: string[];
     },
     returnHeaders?: {
-      [key: string]: string[];
+      [key: string]: string;
     },
   ): void {
     path = `/${path.replace(/^\/+/, "").replace(/\/+$/, "")}`;
