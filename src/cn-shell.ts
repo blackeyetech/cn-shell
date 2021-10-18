@@ -862,6 +862,9 @@ abstract class CNShell {
     authZHeaders?: {
       [key: string]: string[];
     },
+    returnHeaders?: {
+      [key: string]: string[];
+    },
   ): void {
     path = `/${path.replace(/^\/+/, "").replace(/\/+$/, "")}`;
 
@@ -900,6 +903,12 @@ abstract class CNShell {
         ctx.params,
         ctx.headers,
       );
+
+      if (returnHeaders !== undefined) {
+        for (let header in returnHeaders) {
+          ctx.set(header, returnHeaders[header]);
+        }
+      }
 
       switch (accepts) {
         case HTTP_CONTENT_TYPE_XLSX:
@@ -941,6 +950,9 @@ abstract class CNShell {
     id: boolean = true,
     isPrivate: boolean = false,
     authZHeaders?: {
+      [key: string]: string[];
+    },
+    returnHeaders?: {
       [key: string]: string[];
     },
   ): void {
@@ -985,6 +997,12 @@ abstract class CNShell {
 
       // Check if there was no exception caught
       if (noException) {
+        if (returnHeaders !== undefined) {
+          for (let header in returnHeaders) {
+            ctx.set(header, returnHeaders[header]);
+          }
+        }
+
         if (Array.isArray(data) && data.length > this._httpMaxSendRowsLimit) {
           ctx.set("Transfer-Encoding", "chunked");
           await this.sendChunkedArray(ctx, data);
