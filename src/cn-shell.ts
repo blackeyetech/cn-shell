@@ -39,7 +39,8 @@ const CFG_HTTPS_KEY = "HTTPS_KEY_FILE";
 const CFG_HTTPS_CERT = "HTTPS_CERT_FILE";
 const CFG_ALLOW_SELF_SIGNED_CERTS = "ALLOW_SELF_SIGNED_CERTS";
 const CFG_HEALTHCHECK_PATH = "HEALTHCHECK_PATH";
-const CFG_ENABLE_CORS = "HTTP_ENABLE_CORS";
+const CFG_HTTP_ENABLE_CORS = "HTTP_ENABLE_CORS";
+const CFG_HTTP_ENABLE_COMPRESSION = "HTTP_ENABLE_COMPRESSION";
 // const CFG_CORS_ORIGIN = "HTTP_CORS_ORIGIN";
 
 // Config defaults here
@@ -52,6 +53,7 @@ const DEFAULT_HTTP_HEADER_TIMEOUT = "66000";
 const DEFAULT_HTTP_PORT = "8000";
 const DEFAULT_USE_HTTPS = "Y";
 const DEFAULT_ALLOW_SELF_SIGNED_CERTS = "N";
+const DEFAULT_HTTP_ENABLE_COMPRESSION = "Y";
 
 const DEFAULT_HEALTHCHECK_PATH = "/healthcheck";
 
@@ -190,21 +192,32 @@ abstract class CNShell {
     this._httpMaxSendRowsLimit = 1000;
 
     if (master === undefined) {
-      let enableCors = this.getCfg(CFG_ENABLE_CORS);
+      let enableCors = this.getCfg(CFG_HTTP_ENABLE_CORS);
+      let enableCompress = this.getCfg(
+        CFG_HTTP_ENABLE_COMPRESSION,
+        DEFAULT_HTTP_ENABLE_COMPRESSION,
+      );
 
       this._publicApp = new Koa();
       if (enableCors.toUpperCase() === "Y") {
         this._publicApp.use(cors());
       }
+
+      if (enableCompress.toUpperCase() === "Y") {
+        this._publicApp.use(koaCompress());
+      }
+
       this._publicRouter = new KoaRouter();
-      this._publicApp.use(koaCompress());
 
       // this._app.use(koaHelmet());
       this._publicApp.use(koaBodyparser());
 
       this._privateApp = new Koa();
       this._privateRouter = new KoaRouter();
-      this._privateApp.use(koaCompress());
+
+      if (enableCompress.toUpperCase() === "Y") {
+        this._privateApp.use(koaCompress());
+      }
 
       // this._app.use(koaHelmet());
       this._privateApp.use(koaBodyparser());
