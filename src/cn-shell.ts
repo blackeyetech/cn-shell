@@ -57,6 +57,7 @@ const DEFAULT_HEALTHCHECK_PATH = "/healthcheck";
 
 // HTTP content type consts here
 const HTTP_CONTENT_TYPE_JSON = "application/json";
+const HTTP_CONTENT_TYPE_TEXT = "text/plain";
 const HTTP_CONTENT_TYPE_XLSX =
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 
@@ -862,9 +863,6 @@ abstract class CNShell {
     authZHeaders?: {
       [key: string]: string[];
     },
-    returnHeaders?: {
-      [key: string]: string;
-    },
   ): void {
     path = `/${path.replace(/^\/+/, "").replace(/\/+$/, "")}`;
 
@@ -929,12 +927,6 @@ abstract class CNShell {
           ctx.status = 406;
       }
 
-      if (returnHeaders !== undefined) {
-        for (let header in returnHeaders) {
-          ctx.set(header, returnHeaders[header]);
-        }
-      }
-
       await next();
     });
   }
@@ -952,9 +944,7 @@ abstract class CNShell {
     authZHeaders?: {
       [key: string]: string[];
     },
-    returnHeaders?: {
-      [key: string]: string;
-    },
+    contentType?: string,
   ): void {
     path = `/${path.replace(/^\/+/, "").replace(/\/+$/, "")}`;
 
@@ -1002,13 +992,19 @@ abstract class CNShell {
           await this.sendChunkedArray(ctx, data);
         } else {
           ctx.status = 200;
-          ctx.body = JSON.stringify(data);
-          ctx.type = "application/json; charset=utf-8";
 
-          if (returnHeaders !== undefined) {
-            for (let header in returnHeaders) {
-              ctx.set(header, returnHeaders[header]);
-            }
+          if (
+            contentType === undefined ||
+            contentType === HTTP_CONTENT_TYPE_JSON
+          ) {
+            ctx.body = JSON.stringify(data);
+            ctx.type = `${HTTP_CONTENT_TYPE_JSON}; charset=utf-8`;
+          } else if (contentType === HTTP_CONTENT_TYPE_TEXT) {
+            ctx.body = data;
+            ctx.type = `${HTTP_CONTENT_TYPE_TEXT}; charset=utf-8`;
+          } else {
+            ctx.body = data;
+            ctx.type = contentType;
           }
         }
       }
