@@ -887,7 +887,7 @@ abstract class CNShell {
     path = `/${path.replace(/^\/+/, "").replace(/\/+$/, "")}`;
 
     if (id) {
-      path = `${path}/:${this.idParam}`;
+      path = `${path}/:${CNShell.idParam}`;
     }
 
     this.info(
@@ -915,7 +915,7 @@ abstract class CNShell {
       }
 
       data = await cb(
-        ctx.params[this.idParam],
+        ctx.params[CNShell.idParam],
         ctx.query,
         accepts,
         ctx.params,
@@ -969,7 +969,7 @@ abstract class CNShell {
     path = `/${path.replace(/^\/+/, "").replace(/\/+$/, "")}`;
 
     if (id) {
-      path = `${path}/:${this.idParam}`;
+      path = `${path}/:${CNShell.idParam}`;
     }
 
     this.info(
@@ -993,7 +993,7 @@ abstract class CNShell {
       let noException = true;
 
       let data = await cb(
-        ctx.params[this.idParam],
+        ctx.params[CNShell.idParam],
         ctx.query,
         ctx.params,
         ctx.headers,
@@ -1052,7 +1052,7 @@ abstract class CNShell {
     path = `/${path.replace(/^\/+/, "").replace(/\/+$/, "")}`;
 
     if (id) {
-      path = `${path}/:${this.idParam}`;
+      path = `${path}/:${CNShell.idParam}`;
     }
 
     this.info(
@@ -1100,7 +1100,7 @@ abstract class CNShell {
       if (noException) {
         await cb(
           props,
-          ctx.params[this.idParam],
+          ctx.params[CNShell.idParam],
           ctx.params,
           ctx.headers,
           ctx.query,
@@ -1139,7 +1139,7 @@ abstract class CNShell {
     path = `/${path.replace(/^\/+/, "").replace(/\/+$/, "")}`;
 
     if (id) {
-      path = `${path}/:${this.idParam}`;
+      path = `${path}/:${CNShell.idParam}`;
     }
 
     this.info(
@@ -1161,7 +1161,7 @@ abstract class CNShell {
       let noException = true;
 
       await cb(
-        ctx.params[this.idParam],
+        ctx.params[CNShell.idParam],
         ctx.params,
         ctx.headers,
         ctx.query,
