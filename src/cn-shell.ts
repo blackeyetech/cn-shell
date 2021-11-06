@@ -238,6 +238,11 @@ abstract class CNShell {
   abstract stop(): Promise<void>;
   abstract healthCheck(): Promise<boolean>;
 
+  // Static getters here
+  static get idParam(): string {
+    return ID_PARAM;
+  }
+
   // Getters here
   get name(): string {
     return this._name;
@@ -245,10 +250,6 @@ abstract class CNShell {
 
   get version() {
     return this._version;
-  }
-
-  get idParam(): string {
-    return ID_PARAM;
   }
 
   get publicRouter() {
