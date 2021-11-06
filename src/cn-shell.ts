@@ -10,7 +10,7 @@ import koaCompress from "koa-compress";
 import cors from "@koa/cors";
 
 import koaBodyparser from "koa-bodyparser";
-import koaMulter from "koa-multer";
+import koaMulter from "@koa/multer";
 
 import axios, { AxiosInstance } from "axios";
 
@@ -64,6 +64,8 @@ const HTTP_CONTENT_TYPE_XLSX =
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 
 const ACCEPT_CONTENT_TYPES = [HTTP_CONTENT_TYPE_JSON, HTTP_CONTENT_TYPE_XLSX];
+
+const ID_PARAM = "ID";
 
 // Misc consts here
 const version: string = require("../package.json").version;
@@ -243,6 +245,10 @@ abstract class CNShell {
 
   get version() {
     return this._version;
+  }
+
+  get idParam(): string {
+    return ID_PARAM;
   }
 
   get publicRouter() {
@@ -734,7 +740,7 @@ abstract class CNShell {
   }
 
   async sendChunkedArray(
-    ctx: Koa.Context,
+    ctx: Koa.BaseContext,
     data: { [key: string]: any }[],
   ): Promise<void> {
     return new Promise(resolve => {
@@ -880,7 +886,7 @@ abstract class CNShell {
     path = `/${path.replace(/^\/+/, "").replace(/\/+$/, "")}`;
 
     if (id) {
-      path = `${path}/:ID`;
+      path = `${path}/:${this.idParam}`;
     }
 
     this.info(
@@ -908,7 +914,7 @@ abstract class CNShell {
       }
 
       data = await cb(
-        ctx.params.ID,
+        ctx.params[this.idParam],
         ctx.query,
         accepts,
         ctx.params,
@@ -962,7 +968,7 @@ abstract class CNShell {
     path = `/${path.replace(/^\/+/, "").replace(/\/+$/, "")}`;
 
     if (id) {
-      path = `${path}/:ID`;
+      path = `${path}/:${this.idParam}`;
     }
 
     this.info(
@@ -986,7 +992,7 @@ abstract class CNShell {
       let noException = true;
 
       let data = await cb(
-        ctx.params.ID,
+        ctx.params[this.idParam],
         ctx.query,
         ctx.params,
         ctx.headers,
@@ -1045,7 +1051,7 @@ abstract class CNShell {
     path = `/${path.replace(/^\/+/, "").replace(/\/+$/, "")}`;
 
     if (id) {
-      path = `${path}/:ID`;
+      path = `${path}/:${this.idParam}`;
     }
 
     this.info(
@@ -1093,7 +1099,7 @@ abstract class CNShell {
       if (noException) {
         await cb(
           props,
-          ctx.params.ID,
+          ctx.params[this.idParam],
           ctx.params,
           ctx.headers,
           ctx.query,
@@ -1132,7 +1138,7 @@ abstract class CNShell {
     path = `/${path.replace(/^\/+/, "").replace(/\/+$/, "")}`;
 
     if (id) {
-      path = `${path}/:ID`;
+      path = `${path}/:${this.idParam}`;
     }
 
     this.info(
@@ -1153,15 +1159,18 @@ abstract class CNShell {
 
       let noException = true;
 
-      await cb(ctx.params.ID, ctx.params, ctx.headers, ctx.query).catch(
-        (e: HttpError) => {
-          ctx.status = e.status;
-          ctx.body = e.message;
-          ctx.type = "text/plain; charset=utf-8";
+      await cb(
+        ctx.params[this.idParam],
+        ctx.params,
+        ctx.headers,
+        ctx.query,
+      ).catch((e: HttpError) => {
+        ctx.status = e.status;
+        ctx.body = e.message;
+        ctx.type = "text/plain; charset=utf-8";
 
-          noException = false;
-        },
-      );
+        noException = false;
+      });
 
       // Check if there was no exception caught
       if (noException) {
