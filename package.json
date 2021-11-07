@@ -73,6 +73,7 @@
     "koa-helmet": "^4.2.1",
     "koa-router": "^7.4.0",
     "minimist": "^1.2.5",
+    "multer": "^1.4.3",
     "openapi-validator-middleware": "^3.2.3"
   },
   "repository": {
