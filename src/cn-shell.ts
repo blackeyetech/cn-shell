@@ -851,7 +851,10 @@ abstract class CNShell {
         if (noException) {
           if (typeof data === "string" && data.length) {
             // An ID was returned - set the Location header
-            ctx.set("Location", `${ctx.origin}${ctx.url}/${data}`);
+            ctx.set(
+              "Location",
+              `${ctx.origin}${ctx.path}/${data}?${ctx.querystring}`,
+            );
             ctx.status = 201;
           } else {
             if (typeof data === "object") {
