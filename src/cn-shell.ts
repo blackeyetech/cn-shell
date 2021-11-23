@@ -392,7 +392,7 @@ abstract class CNShell {
       this.error(e);
     });
 
-    if (!started) {
+    if (started === undefined || !started) {
       this.info("Heuston, we have a problem. Shutting down now ...");
 
       if (testing) {
@@ -812,7 +812,7 @@ abstract class CNShell {
         return;
       }
 
-      let noException = true;
+      let exception = false;
       let props = <{ [key: string]: any }>ctx.request.body;
 
       if (pattern !== undefined) {
@@ -832,39 +832,41 @@ abstract class CNShell {
             this.error("%j", e);
           }
           ctx.type = "text/plain; charset=utf-8";
-          noException = false;
+          exception = true;
         }
       }
 
-      if (noException) {
-        let data = await cb(props, ctx.params, ctx.headers, ctx.query).catch(
-          (e: HttpError) => {
-            ctx.status = e.status;
-            ctx.body = e.message;
-            ctx.type = "text/plain; charset=utf-8";
+      if (exception) {
+        await next();
+        return;
+      }
 
-            noException = false;
-          },
-        );
+      let data = await cb(props, ctx.params, ctx.headers, ctx.query).catch(
+        (e: HttpError) => {
+          ctx.status = e.status;
+          ctx.body = e.message;
+          ctx.type = "text/plain; charset=utf-8";
 
-        // Check if there was no exception caught
-        if (noException) {
-          if (typeof data === "string" && data.length) {
-            // An ID was returned - set the Location header
-            ctx.set(
-              "Location",
-              `${ctx.origin}${ctx.path}/${data}?${ctx.querystring}`,
-            );
-            ctx.status = 201;
-          } else {
-            if (typeof data === "object") {
-              ctx.type = "application/json; charset=utf-8";
-              ctx.body = JSON.stringify(data);
-              ctx.status = 200;
-            } else {
-              ctx.status = 204;
-            }
-          }
+          exception = true;
+        },
+      );
+
+      if (exception) {
+        await next();
+        return;
+      }
+
+      if (typeof data === "string" && data.length) {
+        // An ID was returned - set the Location header
+        ctx.set("Location", `${ctx.origin}${ctx.path}/${data}`);
+        ctx.status = 201;
+      } else {
+        if (typeof data === "object") {
+          ctx.type = "application/json; charset=utf-8";
+          ctx.body = JSON.stringify(data);
+          ctx.status = 200;
+        } else {
+          ctx.status = 204;
         }
       }
 
@@ -1044,13 +1046,14 @@ abstract class CNShell {
       params: any,
       headers: any,
       query: { [key: string]: string | string[] },
-    ) => Promise<void>,
+    ) => Promise<any>,
     id: boolean = true,
     pattern?: HttpPropsPattern,
     isPrivate: boolean = false,
     authZHeaders?: {
       [key: string]: string[];
     },
+    patch?: boolean,
   ): void {
     path = `/${path.replace(/^\/+/, "").replace(/\/+$/, "")}`;
 
@@ -1064,7 +1067,16 @@ abstract class CNShell {
 
     let router = isPrivate ? this._privateRouter : this._publicRouter;
 
-    router.put(path, async (ctx, next) => {
+    let method = router.put;
+
+    if (patch) {
+      method = router.patch;
+    }
+
+    // Make sure to bind method to router
+    let bound = method.bind(router);
+
+    bound(path, async (ctx, next) => {
       if (
         authZHeaders !== undefined &&
         this.checkAuthZHeaders(authZHeaders, ctx.headers) === false
@@ -1074,7 +1086,7 @@ abstract class CNShell {
         return;
       }
 
-      let noException = true;
+      let exception = false;
       let props = <{ [key: string]: any }>ctx.request.body;
 
       if (pattern !== undefined) {
@@ -1096,28 +1108,47 @@ abstract class CNShell {
 
           ctx.type = "text/plain; charset=utf-8";
 
-          noException = false;
+          exception = true;
         }
       }
 
-      if (noException) {
-        await cb(
-          props,
-          ctx.params[CNShell.idParam],
-          ctx.params,
-          ctx.headers,
-          ctx.query,
-        ).catch((e: HttpError) => {
-          ctx.status = e.status;
-          ctx.body = e.message;
-          ctx.type = "text/plain; charset=utf-8";
-
-          noException = false;
-        });
+      if (exception) {
+        await next();
+        return;
       }
 
-      // Check if there was no exception caught
-      if (noException) {
+      let data = await cb(
+        props,
+        ctx.params[CNShell.idParam],
+        ctx.params,
+        ctx.headers,
+        ctx.query,
+      ).catch(e => {
+        if (e instanceof HttpError) {
+          ctx.status = e.status;
+          ctx.body = e.message;
+        } else {
+          ctx.status = 503;
+          ctx.body = "Unknown error occured";
+
+          this.error("%j", e);
+        }
+
+        ctx.type = "text/plain; charset=utf-8";
+
+        exception = true;
+      });
+
+      if (exception) {
+        await next();
+        return;
+      }
+
+      if (typeof data === "object") {
+        ctx.type = "application/json; charset=utf-8";
+        ctx.body = JSON.stringify(data);
+        ctx.status = 200;
+      } else {
         ctx.status = 204;
       }
 
