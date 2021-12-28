@@ -2,7 +2,7 @@
 import CNLogger from "./cn-logger";
 import CNLoggerConsole from "./cn-logger-console";
 
-import Koa, { HttpError } from "koa";
+import Koa from "koa";
 import KoaRouter from "koa-router";
 import koaCompress from "koa-compress";
 
@@ -821,8 +821,11 @@ abstract class CNShell {
             <{ [key: string]: any }>ctx.request.body,
             pattern,
           );
-        } catch (e) {
-          if (e instanceof HttpError) {
+        } catch (err) {
+          let e = <HttpError>err;
+
+          // Check to see if this is a HttpError
+          if (e.status !== undefined && e.message !== undefined) {
             ctx.status = e.status;
             ctx.body = e.message;
           } else {
@@ -1095,8 +1098,11 @@ abstract class CNShell {
             <{ [key: string]: any }>ctx.request.body,
             pattern,
           );
-        } catch (e) {
-          if (e instanceof HttpError) {
+        } catch (err) {
+          let e = <HttpError>err;
+
+          // Check to see if this is a HttpError
+          if (e.status !== undefined && e.message !== undefined) {
             ctx.status = e.status;
             ctx.body = e.message;
           } else {
@@ -1123,8 +1129,11 @@ abstract class CNShell {
         ctx.params,
         ctx.headers,
         ctx.query,
-      ).catch(e => {
-        if (e instanceof HttpError) {
+      ).catch(err => {
+        let e = <HttpError>err;
+
+        // Check to see if this is a HttpError
+        if (e.status !== undefined && e.message !== undefined) {
           ctx.status = e.status;
           ctx.body = e.message;
         } else {
