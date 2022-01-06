@@ -39,7 +39,8 @@ const CFG_HTTPS_KEY = "HTTPS_KEY_FILE";
 const CFG_HTTPS_CERT = "HTTPS_CERT_FILE";
 const CFG_ALLOW_SELF_SIGNED_CERTS = "ALLOW_SELF_SIGNED_CERTS";
 const CFG_HEALTHCHECK_PATH = "HEALTHCHECK_PATH";
-const CFG_HTTP_ENABLE_CORS = "HTTP_ENABLE_CORS";
+const CFG_HTTP_ENABLE_CORS = "HTTP_ENABLE_CORS"; // For public interface
+const CFG_HTTP_PRIVATE_ENABLE_CORS = "HTTP_PRIVATE_ENABLE_CORS"; // For private
 const CFG_HTTP_ENABLE_COMPRESSION = "HTTP_ENABLE_COMPRESSION";
 // const CFG_CORS_ORIGIN = "HTTP_CORS_ORIGIN";
 
@@ -215,11 +216,18 @@ abstract class CNShell {
       this._publicApp.use(koaBodyparser());
 
       this._privateApp = new Koa();
-      this._privateRouter = new KoaRouter();
+
+      let enablePrivateCors = this.getCfg(CFG_HTTP_PRIVATE_ENABLE_CORS);
+
+      if (enablePrivateCors.toUpperCase() === "Y") {
+        this._privateApp.use(cors());
+      }
 
       if (enableCompress.toUpperCase() === "Y") {
         this._privateApp.use(koaCompress());
       }
+
+      this._privateRouter = new KoaRouter();
 
       // this._app.use(koaHelmet());
       this._privateApp.use(koaBodyparser());
