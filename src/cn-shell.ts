@@ -95,6 +95,16 @@ export { Context } from "koa";
 
 export { CNLogger };
 
+export class CNReadDataDetails {
+  public contentType: string;
+  public data: any;
+
+  constructor(contentType: string, data: any) {
+    this.contentType = contentType;
+    this.data = data;
+  }
+}
+
 // CNShell class here
 abstract class CNShell {
   // Properties here
@@ -1023,7 +1033,13 @@ abstract class CNShell {
 
       // Check if there was no exception caught
       if (noException) {
-        if (Array.isArray(data) && data.length > this._httpMaxSendRowsLimit) {
+        if (data instanceof CNReadDataDetails) {
+          ctx.body = data.data;
+          ctx.type = data.contentType;
+        } else if (
+          Array.isArray(data) &&
+          data.length > this._httpMaxSendRowsLimit
+        ) {
           ctx.set("Transfer-Encoding", "chunked");
           await this.sendChunkedArray(ctx, data);
         } else {
