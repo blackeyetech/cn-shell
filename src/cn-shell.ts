@@ -30,6 +30,7 @@ const CFG_LOGGER = "LOGGER";
 const CFG_LOG_LEVEL = "LOG_LEVEL";
 const CFG_LOG_TIMESTAMP = "LOG_TIMESTAMP";
 
+const CFG_HTTP_DISABLE = "HTTP_DISABLE";
 const CFG_HTTP_KEEP_ALIVE_TIMEOUT = "HTTP_KEEP_ALIVE_TIMEOUT";
 const CFG_HTTP_HEADER_TIMEOUT = "HTTP_HEADER_TIMEOUT";
 const CFG_HTTP_PORT = "HTTP_PORT";
@@ -49,6 +50,7 @@ const DEFAULT_LOGGER = "CONSOLE";
 const DEFAULT_LOG_LEVEL = "INFO";
 const DEFAULT_LOG_TIMESTAMP = "N";
 
+const DEFAULT_HTTP_DISABLE = "N";
 const DEFAULT_HTTP_KEEP_ALIVE_TIMEOUT = "65000";
 const DEFAULT_HTTP_HEADER_TIMEOUT = "66000";
 const DEFAULT_HTTP_PORT = "8000";
@@ -117,14 +119,16 @@ abstract class CNShell {
 
   private _publicApp: Koa;
   private _publicRouter: KoaRouter;
-  private _publicServer: http.Server;
+  private _publicServer: http.Server | undefined;
   private _privateApp: Koa;
   private _privateRouter: KoaRouter;
-  private _privateServer: http.Server;
+  private _privateServer: http.Server | undefined;
   private _axios: AxiosInstance;
 
   private _healthCheckPath: string;
   private _minimist: minimist.ParsedArgs;
+
+  private _httpDisabled: boolean;
 
   // Constructor here
   constructor(name: string, master?: CNShell) {
@@ -203,6 +207,13 @@ abstract class CNShell {
     }
 
     this._httpMaxSendRowsLimit = 1000;
+
+    let disableHttp = this.getCfg(CFG_HTTP_DISABLE, DEFAULT_HTTP_DISABLE);
+    if (disableHttp.toUpperCase() === "Y") {
+      this._httpDisabled = true;
+    } else {
+      this._httpDisabled = false;
+    }
 
     if (master === undefined) {
       let enableCors = this.getCfg(CFG_HTTP_ENABLE_CORS);
@@ -296,6 +307,10 @@ abstract class CNShell {
 
   get healthCheckPath() {
     return this._healthCheckPath;
+  }
+
+  get httpDisabled() {
+    return this._httpDisabled;
   }
 
   // Setters here
@@ -401,8 +416,13 @@ abstract class CNShell {
     this.info(`CN-Shell Version (${this._version})`);
     this.info(`NODE_ENV (${NODE_ENV})`);
 
+    // Check if we are the master
     if (this._master === undefined) {
-      this.initHttp();
+      if (this._httpDisabled) {
+        this.info("HTTP has been disabled. Not initialising HTTP interfaces");
+      } else {
+        this.initHttp();
+      }
     }
 
     this.info("Attempting to start application ...");
