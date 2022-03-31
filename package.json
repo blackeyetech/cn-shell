@@ -49,7 +49,7 @@
   "author": "Black Eye Technology",
   "license": "MIT",
   "devDependencies": {
-    "husky": "^3.1.0",
+    "husky": "^7.0.4",
     "lint-staged": "^12.3.7",
     "prettier": "^1.19.1",
     "typescript": "^3.9.10"
