@@ -1,4 +1,4 @@
-import CNShell from "./cn-shell";
+import CNShell, { HttpRedirect } from "./cn-shell";
 
 class App1 extends CNShell {
   constructor(name: string) {
@@ -9,9 +9,18 @@ class App1 extends CNShell {
     this.createRoute(
       "/create",
       async () => {
-        return "1";
+        return new HttpRedirect(301, "http://google.ie");
       },
       undefined,
+      true,
+    );
+
+    this.simpleReadRoute(
+      "/read",
+      async () => {
+        return new HttpRedirect(301, "http://google.ie");
+      },
+      false,
       true,
     );
 

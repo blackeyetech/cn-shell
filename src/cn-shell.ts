@@ -93,6 +93,16 @@ export interface HttpPropsPattern {
   };
 }
 
+export class HttpRedirect {
+  public status: number;
+  public url: string;
+
+  constructor(status: number, url: string) {
+    this.status = status;
+    this.url = url;
+  }
+}
+
 export { Context } from "koa";
 
 export { CNLogger };
@@ -901,6 +911,9 @@ abstract class CNShell {
         // An ID was returned - set the Location header
         ctx.set("Location", `${ctx.origin}${ctx.path}/${data}`);
         ctx.status = 201;
+      } else if (data instanceof HttpRedirect) {
+        ctx.status = data.status;
+        ctx.redirect(data.url);
       } else {
         if (typeof data === "object") {
           ctx.type = "application/json; charset=utf-8";
@@ -1056,6 +1069,9 @@ abstract class CNShell {
         if (data instanceof CNReadDataDetails) {
           ctx.body = data.data;
           ctx.type = data.contentType;
+        } else if (data instanceof HttpRedirect) {
+          ctx.status = data.status;
+          ctx.redirect(data.url);
         } else if (
           Array.isArray(data) &&
           data.length > this._httpMaxSendRowsLimit
