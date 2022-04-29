@@ -685,8 +685,6 @@ abstract class CNShell {
       }
     }
 
-    this.debug("found: %j", found);
-
     return found;
   }
 
