@@ -117,6 +117,12 @@ export class CNReadDataDetails {
   }
 }
 
+type koactx = Koa.ParameterizedContext<
+  any,
+  KoaRouter.IRouterParamContext<any, {}>,
+  any
+>;
+
 // CNShell class here
 abstract class CNShell {
   // Properties here
@@ -826,6 +832,29 @@ abstract class CNShell {
     });
   }
 
+  parseCookies(cookieString: string) {
+    if (cookieString === "") return {};
+
+    // split the cookies into pairs
+    let pairs = cookieString.split(";");
+
+    // Now split each oair into key/value pairs
+    let splittedPairs = pairs.map(cookie => cookie.split("="));
+
+    // Create an object with all key-value pairs
+    const cookieObj = splittedPairs.reduce(
+      (obj: { [key: string]: string }, cookie) => {
+        // cookie[0] is the cookir name, cookie[1] is the cookie value
+        obj[decodeURI(cookie[0].trim())] = decodeURIComponent(cookie[1].trim());
+
+        return obj;
+      },
+      {},
+    );
+
+    return cookieObj;
+  }
+
   createRoute(
     path: string,
     cb: (
@@ -833,6 +862,7 @@ abstract class CNShell {
       params: any,
       headers: any,
       query: { [key: string]: string | string[] },
+      ctx: koactx,
     ) => Promise<any>,
     pattern?: HttpPropsPattern,
     isPrivate: boolean = false,
@@ -890,7 +920,7 @@ abstract class CNShell {
         return;
       }
 
-      let data = await cb(props, ctx.params, ctx.headers, ctx.query).catch(
+      let data = await cb(props, ctx.params, ctx.headers, ctx.query, ctx).catch(
         (e: HttpError) => {
           ctx.status = e.status;
           ctx.body = e.message;
@@ -934,6 +964,7 @@ abstract class CNShell {
       accepts: string,
       params: any,
       headers: any,
+      ctx: koactx,
     ) => Promise<any>,
     id: boolean = true,
     isPrivate: boolean = false,
@@ -977,6 +1008,7 @@ abstract class CNShell {
         accepts,
         ctx.params,
         ctx.headers,
+        ctx,
       );
 
       switch (accepts) {
@@ -1015,6 +1047,7 @@ abstract class CNShell {
       query: { [key: string]: string | string[] },
       params: any,
       headers: any,
+      ctx: koactx,
     ) => Promise<any>,
     id: boolean = true,
     isPrivate: boolean = false,
@@ -1054,6 +1087,7 @@ abstract class CNShell {
         ctx.query,
         ctx.params,
         ctx.headers,
+        ctx,
       ).catch((e: HttpError) => {
         ctx.status = e.status;
         ctx.body = e.message;
@@ -1107,6 +1141,7 @@ abstract class CNShell {
       params: any,
       headers: any,
       query: { [key: string]: string | string[] },
+      ctx: koactx,
     ) => Promise<any>,
     id: boolean = true,
     pattern?: HttpPropsPattern,
@@ -1187,6 +1222,7 @@ abstract class CNShell {
         ctx.params,
         ctx.headers,
         ctx.query,
+        ctx,
       ).catch(err => {
         let e = <HttpError>err;
 
@@ -1230,6 +1266,7 @@ abstract class CNShell {
       params: any,
       headers: any,
       query: { [key: string]: string | string[] },
+      ctx: koactx,
     ) => Promise<void>,
     id: boolean = true,
     isPrivate: boolean = false,
@@ -1266,6 +1303,7 @@ abstract class CNShell {
         ctx.params,
         ctx.headers,
         ctx.query,
+        ctx,
       ).catch((e: HttpError) => {
         ctx.status = e.status;
         ctx.body = e.message;

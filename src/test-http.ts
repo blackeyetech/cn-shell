@@ -1,4 +1,4 @@
-import CNShell, { HttpRedirect } from "./cn-shell";
+import CNShell from "./cn-shell";
 
 class App1 extends CNShell {
   constructor(name: string) {
@@ -8,8 +8,15 @@ class App1 extends CNShell {
   async start(): Promise<boolean> {
     this.createRoute(
       "/create",
-      async () => {
-        return new HttpRedirect(301, "http://google.ie");
+      async (_1, _2, headers, _4, ctx) => {
+        this.info("%j", headers);
+        this.info("%j", this.parseCookies(headers["cookie"]));
+        ctx.cookies.set("create-cookie", "123xyz", {
+          domain: "localhost",
+          path: "/",
+        });
+
+        return "hello";
       },
       undefined,
       true,
@@ -17,8 +24,16 @@ class App1 extends CNShell {
 
     this.simpleReadRoute(
       "/read",
-      async () => {
-        return new HttpRedirect(301, "http://google.ie");
+      async (_1, _2, _3, headers, ctx) => {
+        this.info("%j", headers);
+        this.info("%j", this.parseCookies(headers["cookie"]));
+
+        ctx.cookies.set("read-cookie", "123xyz", {
+          domain: "localhost",
+          path: "/",
+        });
+
+        return "hello";
       },
       false,
       true,
@@ -26,8 +41,14 @@ class App1 extends CNShell {
 
     this.updateRoute(
       "/update",
-      async () => {
-        return { hello: "update" };
+      async (_1, _2, _3, headers, _5, ctx) => {
+        this.info("%j", headers);
+        ctx.cookies.set("update-cookie", "123xyz", {
+          domain: "localhost",
+          path: "/",
+        });
+
+        return "hello";
       },
       false,
       undefined,
