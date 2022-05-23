@@ -117,7 +117,7 @@ export class CNReadDataDetails {
   }
 }
 
-type koactx = Koa.ParameterizedContext<
+export type CNCtx = Koa.ParameterizedContext<
   any,
   KoaRouter.IRouterParamContext<any, {}>,
   any
@@ -862,7 +862,7 @@ abstract class CNShell {
       params: any,
       headers: any,
       query: { [key: string]: string | string[] },
-      ctx: koactx,
+      ctx: CNCtx,
     ) => Promise<any>,
     pattern?: HttpPropsPattern,
     isPrivate: boolean = false,
@@ -964,7 +964,7 @@ abstract class CNShell {
       accepts: string,
       params: any,
       headers: any,
-      ctx: koactx,
+      ctx: CNCtx,
     ) => Promise<any>,
     id: boolean = true,
     isPrivate: boolean = false,
@@ -1047,7 +1047,7 @@ abstract class CNShell {
       query: { [key: string]: string | string[] },
       params: any,
       headers: any,
-      ctx: koactx,
+      ctx: CNCtx,
     ) => Promise<any>,
     id: boolean = true,
     isPrivate: boolean = false,
@@ -1141,7 +1141,7 @@ abstract class CNShell {
       params: any,
       headers: any,
       query: { [key: string]: string | string[] },
-      ctx: koactx,
+      ctx: CNCtx,
     ) => Promise<any>,
     id: boolean = true,
     pattern?: HttpPropsPattern,
@@ -1266,7 +1266,7 @@ abstract class CNShell {
       params: any,
       headers: any,
       query: { [key: string]: string | string[] },
-      ctx: koactx,
+      ctx: CNCtx,
     ) => Promise<void>,
     id: boolean = true,
     isPrivate: boolean = false,

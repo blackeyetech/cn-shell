@@ -10,8 +10,10 @@ class App1 extends CNShell {
       "/create",
       async (_1, _2, headers, _4, ctx) => {
         this.info("%j", headers);
-        this.info("%j", this.parseCookies(headers["cookie"]));
-        ctx.cookies.set("create-cookie", "123xyz", {
+        if (headers["cookie"] !== undefined) {
+          this.info("%j", this.parseCookies(headers["cookie"]));
+        }
+        ctx.cookies.set("create-cookie", "ABCabc", {
           domain: "localhost",
           path: "/",
         });
@@ -26,14 +28,30 @@ class App1 extends CNShell {
       "/read",
       async (_1, _2, _3, headers, ctx) => {
         this.info("%j", headers);
-        this.info("%j", this.parseCookies(headers["cookie"]));
-
-        ctx.cookies.set("read-cookie", "123xyz", {
+        if (headers["cookie"] !== undefined) {
+          this.info("%j", this.parseCookies(headers["cookie"]));
+        }
+        ctx.cookies.set("read-cookie", "123xABCabcyz", {
           domain: "localhost",
           path: "/",
+          sameSite: "strict",
         });
 
-        return "hello";
+        return "Hello";
+      },
+      false,
+      true,
+    );
+
+    this.simpleReadRoute(
+      "/",
+      async (_1, _2, _3, headers) => {
+        this.info("%j", headers);
+        if (headers["cookie"] !== undefined) {
+          this.info("%j", this.parseCookies(headers["cookie"]));
+        }
+
+        return "Hello";
       },
       false,
       true,
