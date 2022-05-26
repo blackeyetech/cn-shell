@@ -10,7 +10,7 @@ import koaCompress from "koa-compress";
 import cors from "@koa/cors";
 
 import koaBodyparser from "koa-bodyparser";
-import koaMulter from "@koa/multer";
+// import koaMulter from "@koa/multer";
 
 import axios, { AxiosInstance } from "axios";
 
@@ -757,40 +757,40 @@ abstract class CNShell {
     });
   }
 
-  uploadSingleFileRoute(
-    path: string,
-    fieldName: string,
-    cb: (file: string) => void,
-    maxFileSize: number = 1024 * 1024 * 4,
-    dest: string = "/tmp",
-    isPrivate: boolean = false,
-  ) {
-    path = `/${path.replace(/^\/+/, "").replace(/\/+$/, "")}`;
+  // uploadSingleFileRoute(
+  //   path: string,
+  //   fieldName: string,
+  //   cb: (file: string) => void,
+  //   maxFileSize: number = 1024 * 1024 * 4,
+  //   dest: string = "/tmp",
+  //   isPrivate: boolean = false,
+  // ) {
+  //   path = `/${path.replace(/^\/+/, "").replace(/\/+$/, "")}`;
 
-    this.info(
-      `Adding single file upload route on ${
-        isPrivate ? "private" : "public"
-      } path ${path}`,
-    );
+  //   this.info(
+  //     `Adding single file upload route on ${
+  //       isPrivate ? "private" : "public"
+  //     } path ${path}`,
+  //   );
 
-    let multer = koaMulter({ dest: dest, limits: { fileSize: maxFileSize } });
+  //   let multer = koaMulter({ dest: dest, limits: { fileSize: maxFileSize } });
 
-    let router = isPrivate ? this._privateRouter : this._publicRouter;
+  //   let router = isPrivate ? this._privateRouter : this._publicRouter;
 
-    router.post(path, async (ctx: any, next) => {
-      await multer.single(fieldName)(ctx, next);
-      let response = await cb(ctx.req.file.path);
+  //   router.post(path, async (ctx: any, next) => {
+  //     await multer.single(fieldName)(ctx, next);
+  //     let response = await cb(ctx.req.file.path);
 
-      ctx.status = 200;
+  //     ctx.status = 200;
 
-      if (response !== undefined) {
-        ctx.type = "application/json; charset=utf-8";
-        ctx.body = JSON.stringify(response);
-      }
+  //     if (response !== undefined) {
+  //       ctx.type = "application/json; charset=utf-8";
+  //       ctx.body = JSON.stringify(response);
+  //     }
 
-      await next();
-    });
-  }
+  //     await next();
+  //   });
+  // }
 
   async sendChunkedArray(
     ctx: Koa.BaseContext,

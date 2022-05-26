@@ -13,31 +13,53 @@ class App1 extends CNShell {
         if (headers["cookie"] !== undefined) {
           this.info("%j", this.parseCookies(headers["cookie"]));
         }
-        ctx.cookies.set("create-cookie", "ABCabc", {
+        ctx.cookies.set("create-cookie", undefined, {
           domain: "localhost",
           path: "/",
+          maxAge: -1,
         });
 
         return "hello";
       },
-      undefined,
+      { done: { type: "boolean", required: true, allowed: [true] } },
       true,
     );
 
     this.simpleReadRoute(
-      "/read",
-      async (_1, _2, _3, headers, ctx) => {
-        this.info("%j", headers);
+      "/create",
+      async (_1, query, _3, headers, ctx) => {
+        this.info("%j", query);
         if (headers["cookie"] !== undefined) {
-          this.info("%j", this.parseCookies(headers["cookie"]));
+          this.info("%j", ctx.cookies.get("cookie"));
         }
         ctx.cookies.set("read-cookie", "123xABCabcyz", {
           domain: "localhost",
           path: "/",
           sameSite: "strict",
+          maxAge: 10000000,
         });
 
-        return "Hello";
+        return "Create";
+      },
+      false,
+      true,
+    );
+
+    this.simpleReadRoute(
+      "/del",
+      async (_1, query, _3, headers, ctx) => {
+        this.info("%j", query);
+        if (headers["cookie"] !== undefined) {
+          this.info("%j", ctx.cookies.get("cookie"));
+        }
+        ctx.cookies.set("read-cookie", "123xABCabcyz", {
+          domain: "localhost",
+          path: "/",
+          sameSite: "strict",
+          maxAge: -1,
+        });
+
+        return "Del";
       },
       false,
       true,
@@ -45,11 +67,8 @@ class App1 extends CNShell {
 
     this.simpleReadRoute(
       "/",
-      async (_1, _2, _3, headers) => {
-        this.info("%j", headers);
-        if (headers["cookie"] !== undefined) {
-          this.info("%j", this.parseCookies(headers["cookie"]));
-        }
+      async (_1, _2, _3, _4, ctx) => {
+        this.info("%j", ctx.cookies.get("read-cookie"));
 
         return "Hello";
       },
