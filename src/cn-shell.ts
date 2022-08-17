@@ -1,6 +1,6 @@
 // imports here
-import CNLogger from "./cn-logger";
-import CNLoggerConsole from "./cn-logger-console";
+import { CNLogger } from "./cn-logger";
+import { CNLoggerConsole } from "./cn-logger-console";
 
 import Koa from "koa";
 import KoaRouter from "koa-router";
@@ -29,6 +29,7 @@ import minimist from "minimist";
 const CFG_LOGGER = "LOGGER";
 const CFG_LOG_LEVEL = "LOG_LEVEL";
 const CFG_LOG_TIMESTAMP = "LOG_TIMESTAMP";
+const CFG_LOG_TIMESTAMP_FORMAT = "LOG_TIMESTAMP_FORMAT";
 
 const CFG_HTTP_DISABLE = "HTTP_DISABLE";
 const CFG_HTTP_KEEP_ALIVE_TIMEOUT = "HTTP_KEEP_ALIVE_TIMEOUT";
@@ -154,26 +155,37 @@ abstract class CNShell {
 
     this._minimist = minimist(process.argv.slice(2));
 
+    let logTimestampSetting = this.getCfg(
+      CFG_LOG_TIMESTAMP,
+      DEFAULT_LOG_TIMESTAMP,
+    );
+    let logTimestamps =
+      logTimestampSetting.toUpperCase() === "Y" ? true : false;
+
+    let logTimestampFormat: string = this.getCfg(CFG_LOG_TIMESTAMP_FORMAT, "");
+
     let logger: string = this.getCfg(CFG_LOGGER, DEFAULT_LOGGER);
     switch (logger.toUpperCase()) {
       case "CONSOLE":
-        this._logger = new CNLoggerConsole(name);
+        this._logger = new CNLoggerConsole(
+          name,
+          logTimestamps,
+          logTimestampFormat,
+        );
         break;
       default:
-        this._logger = new CNLoggerConsole(name);
-        this.warn(`Logger ${logger} is unknown. Using console logger.`);
+        // If we don't know the specified logger then use the console logger
+        this._logger = new CNLoggerConsole(
+          name,
+          logTimestamps,
+          logTimestampFormat,
+        );
         break;
     }
 
-    let logTimestamp = this.getCfg(
-      CFG_LOG_TIMESTAMP,
-      DEFAULT_LOG_TIMESTAMP,
-      true,
-    );
-    this._logger.logTimestamps =
-      logTimestamp.toUpperCase() === "Y" ? true : false;
+    this._logger.start();
 
-    let logLevel: string = this.getCfg(CFG_LOG_LEVEL, DEFAULT_LOG_LEVEL, true);
+    let logLevel: string = this.getCfg(CFG_LOG_LEVEL, DEFAULT_LOG_LEVEL);
 
     switch (logLevel.toUpperCase()) {
       case "SILENT":
@@ -188,6 +200,9 @@ abstract class CNShell {
         break;
       case "INFO":
         this._logger.level = CNLogger.CNLogLevel.LOG_INFO;
+        break;
+      case "STARTUP":
+        this._logger.level = CNLogger.CNLogLevel.LOG_START_UP;
         break;
       case "DEBUG":
         this._logger.level = CNLogger.CNLogLevel.LOG_DEBUG;
@@ -209,7 +224,7 @@ abstract class CNShell {
     );
 
     if (allow.toUpperCase() === "Y") {
-      this.info("Allowing self signed certs!");
+      this.startup("Allowing self signed certs!");
 
       this._axios = axios.create({
         httpsAgent: new https.Agent({
@@ -217,7 +232,7 @@ abstract class CNShell {
         }),
       });
     } else {
-      this.info("Not allowing self signed certs!");
+      this.startup("Not allowing self signed certs!");
 
       this._axios = axios.create();
     }
@@ -338,7 +353,7 @@ abstract class CNShell {
   private initHttp(): void {
     this.addHealthCheckEndpoint();
 
-    this.info("Initialising HTTP interfaces ...");
+    this.startup("Initialising HTTP interfaces ...");
 
     this._publicApp.use(this._publicRouter.routes());
     this._privateApp.use(this._privateRouter.routes());
@@ -348,10 +363,10 @@ abstract class CNShell {
     let useHttps = this.getCfg(CFG_USE_HTTPS, DEFAULT_USE_HTTPS);
 
     if (httpif !== undefined && httpif.length) {
-      this.info(`Finding IP for interface (${httpif})`);
+      this.startup(`Finding IP for interface (${httpif})`);
 
       let ifaces = os.networkInterfaces();
-      this.info("Interfaces on host: %j", ifaces);
+      this.startup("Interfaces on host: %j", ifaces);
 
       if (ifaces[httpif] === undefined) {
         throw new Error(`${httpif} is not an interface on this server`);
@@ -362,8 +377,8 @@ abstract class CNShell {
       for (let i of ifaces[httpif]) {
         if (i.family === "IPv4") {
           ip = i.address;
-          this.info(`Found IP (${ip}) for interface ${httpif}`);
-          this.info(`Will listen on interface ${httpif} (IP: ${ip})`);
+          this.startup(`Found IP (${ip}) for interface ${httpif}`);
+          this.startup(`Will listen on interface ${httpif} (IP: ${ip})`);
 
           break;
         }
@@ -374,7 +389,7 @@ abstract class CNShell {
       }
 
       if (useHttps.toUpperCase() === "Y") {
-        this.info(`Attempting to listen on (https://${ip}:${port})`);
+        this.startup(`Attempting to listen on (https://${ip}:${port})`);
 
         let keyfile = this.getRequiredCfg(CFG_HTTPS_KEY);
         let certFile = this.getRequiredCfg(CFG_HTTPS_CERT);
@@ -388,7 +403,7 @@ abstract class CNShell {
           .createServer(options, this._publicApp.callback())
           .listen(parseInt(port, 10), ip);
       } else {
-        this.info(`Attempting to listen on (http://${ip}:${port})`);
+        this.startup(`Attempting to listen on (http://${ip}:${port})`);
 
         this._publicServer = http
           .createServer(this._publicApp.callback())
@@ -415,39 +430,41 @@ abstract class CNShell {
       this._publicServer.headersTimeout = parseInt(timeout, 10);
     }
 
-    this.info(`Attempting to listen on (http://127.0.0.1:${port})`);
+    this.startup(`Attempting to listen on (http://127.0.0.1:${port})`);
     this._privateServer = this._privateApp.listen(
       parseInt(port, 10),
       "127.0.0.1",
     );
 
-    this.info("Now listening!");
+    this.startup("Now listening!");
   }
 
   // Public methods here
 
   // This method is only for a CN App - don't call for a CN extension
   async init(testing?: boolean) {
-    this.info("Initialising ...");
-    this.info(`CN-Shell Version (${this._version})`);
-    this.info(`NODE_ENV (${NODE_ENV})`);
+    this.startup("Initialising ...");
+    this.startup(`CN-Shell Version (${this._version})`);
+    this.startup(`NODE_ENV (${NODE_ENV})`);
 
     // Check if we are the master
     if (this._master === undefined) {
       if (this._httpDisabled) {
-        this.info("HTTP has been disabled. Not initialising HTTP interfaces");
+        this.startup(
+          "HTTP has been disabled. Not initialising HTTP interfaces",
+        );
       } else {
         this.initHttp();
       }
     }
 
-    this.info("Attempting to start application ...");
+    this.startup("Attempting to start application ...");
     let started = await this.start().catch(e => {
       this.error(e);
     });
 
     if (started === undefined || !started) {
-      this.info("Heuston, we have a problem. Shutting down now ...");
+      this.error("Heuston, we have a problem. Shutting down now ...");
 
       if (testing) {
         // Do a soft stop so we don't force any testing code to exit
@@ -459,35 +476,37 @@ abstract class CNShell {
     }
 
     if (this._master === undefined) {
-      this.info("Setting up event handler for SIGINT and SIGTERM");
+      this.startup("Setting up event handler for SIGINT and SIGTERM");
       process.on("SIGINT", async () => await this.exit());
       process.on("SIGTERM", async () => await this.exit());
 
-      this.info("Ready to Rock and Roll baby!");
+      this.startup("Ready to Rock and Roll baby!");
     }
   }
 
   async exit(hard: boolean = true): Promise<void> {
-    this.info("Exiting ...");
+    this.startup("Exiting ...");
 
     if (this._publicServer !== undefined) {
-      this.info("Closing public HTTP port on server now ...");
+      this.startup("Closing public HTTP port on server now ...");
       this._publicServer.close();
-      this.info("Port closed");
+      this.startup("Port closed");
     }
 
     if (this._privateServer !== undefined) {
-      this.info("Closing private HTTP port on server now ...");
+      this.startup("Closing private HTTP port on server now ...");
       this._privateServer.close();
-      this.info("Port closed");
+      this.startup("Port closed");
     }
 
-    this.info("Attempting to stop application ...");
+    this.startup("Attempting to stop application ...");
     await this.stop().catch(e => {
       this.error(e);
     });
 
-    this.info("So long and thanks for all the fish!");
+    this.startup("So long and thanks for all the fish!");
+
+    this._logger.stop();
 
     if (hard) {
       process.exit();
@@ -508,8 +527,12 @@ abstract class CNShell {
       value = defaultVal;
     }
 
-    if (this._logger !== undefined && silent === false) {
-      this.info("Config (%s) = (%s)", evar, redact ? "redacted" : value);
+    if (
+      this._logger !== undefined &&
+      silent === false &&
+      this._logger.started
+    ) {
+      this.startup("Config (%s) = (%s)", evar, redact ? "redacted" : value);
     }
 
     return value;
@@ -519,8 +542,12 @@ abstract class CNShell {
     let evar = `CNA_${config.toUpperCase()}`;
     let value = process.env[evar];
 
-    if (this._logger !== undefined && silent === false) {
-      this.info("Config (%s) = (%s)", evar, redact ? "redacted" : value);
+    if (
+      this._logger !== undefined &&
+      silent === false &&
+      this._logger.started
+    ) {
+      this.startup("Config (%s) = (%s)", evar, redact ? "redacted" : value);
     }
 
     if (value === undefined) {
@@ -540,8 +567,12 @@ abstract class CNShell {
       value = defaultVal;
     }
 
-    if (this._logger !== undefined && silent === false) {
-      this.info("CLI parameter (%s) = (%s)", param, value);
+    if (
+      this._logger !== undefined &&
+      silent === false &&
+      this._logger.started
+    ) {
+      this.startup("CLI parameter (%s) = (%s)", param, value);
     }
 
     return value;
@@ -561,6 +592,10 @@ abstract class CNShell {
 
   info(...args: any): void {
     this._logger.info(...args);
+  }
+
+  startup(...args: any): void {
+    this._logger.startup(...args);
   }
 
   debug(...args: any): void {
@@ -732,7 +767,7 @@ abstract class CNShell {
   ): void {
     path = `/${path.replace(/^\/+/, "").replace(/\/+$/, "")}`;
 
-    this.info(
+    this.startup(
       `Adding static response route on ${
         isPrivate ? "private" : "public"
       } path ${path}`,
@@ -767,7 +802,7 @@ abstract class CNShell {
   // ) {
   //   path = `/${path.replace(/^\/+/, "").replace(/\/+$/, "")}`;
 
-  //   this.info(
+  //   this.startup(
   //     `Adding single file upload route on ${
   //       isPrivate ? "private" : "public"
   //     } path ${path}`,
@@ -872,7 +907,7 @@ abstract class CNShell {
   ): void {
     path = `/${path.replace(/^\/+/, "").replace(/\/+$/, "")}`;
 
-    this.info(
+    this.startup(
       `Adding create route on ${isPrivate ? "private" : "public"} path ${path}`,
     );
 
@@ -978,7 +1013,7 @@ abstract class CNShell {
       path = `${path}/:${CNShell.idParam}`;
     }
 
-    this.info(
+    this.startup(
       `Adding read route on ${isPrivate ? "private" : "public"} path ${path}`,
     );
 
@@ -1062,7 +1097,7 @@ abstract class CNShell {
       path = `${path}/:${CNShell.idParam}`;
     }
 
-    this.info(
+    this.startup(
       `Adding simple read route on ${
         isPrivate ? "private" : "public"
       } path ${path}`,
@@ -1157,7 +1192,7 @@ abstract class CNShell {
       path = `${path}/:${CNShell.idParam}`;
     }
 
-    this.info(
+    this.startup(
       `Adding update route on ${isPrivate ? "private" : "public"} path ${path}`,
     );
 
@@ -1280,7 +1315,7 @@ abstract class CNShell {
       path = `${path}/:${CNShell.idParam}`;
     }
 
-    this.info(
+    this.startup(
       `Adding delete route on ${isPrivate ? "private" : "public"} path ${path}`,
     );
 
@@ -1346,7 +1381,7 @@ abstract class CNShell {
     let path = this.getCfg(CFG_HEALTHCHECK_PATH, DEFAULT_HEALTHCHECK_PATH);
     this._healthCheckPath = path;
 
-    this._logger.info(`Adding Health Check endpoint on ${path}`);
+    this.startup(`Adding Health Check endpoint on ${path}`);
 
     this._publicRouter.get(path, async (ctx, next) => {
       let healthy = await this.healthCheck().catch(e => {

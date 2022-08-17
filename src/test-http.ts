@@ -6,6 +6,12 @@ class App1 extends CNShell {
   }
 
   async start(): Promise<boolean> {
+    this.startup("Hello!");
+    this.debug("debug");
+    this.trace("trace");
+    this.warn("WARN");
+    this.error("error");
+    this.fatal("fatal");
     this.createRoute(
       "/create",
       async (_1, _2, headers, _4, ctx) => {

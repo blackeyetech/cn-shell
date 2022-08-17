@@ -49,6 +49,7 @@
   "author": "Black Eye Technology",
   "license": "MIT",
   "devDependencies": {
+    "@types/luxon": "^3.0.0",
     "husky": "^7.0.4",
     "lint-staged": "^12.5.0",
     "prettier": "^1.19.1",
@@ -71,6 +72,7 @@
     "koa-compress": "^4.0.1",
     "koa-helmet": "^4.2.1",
     "koa-router": "^7.4.0",
+    "luxon": "^3.0.1",
     "minimist": "^1.2.6"
   },
   "repository": {
